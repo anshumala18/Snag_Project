@@ -1,0 +1,202 @@
+import { useState } from 'react';
+import { useNavigate, Link } from 'react-router-dom';
+import { useAuth } from '../../context/AuthContext';
+import { Building2, Mail, Phone, Lock, Eye, EyeOff, Wrench, ArrowLeft, UserPlus, ClipboardList, Bell } from 'lucide-react';
+import toast from 'react-hot-toast';
+
+const SPECIALIZATIONS = ['Civil', 'Electrical', 'Plumbing', 'Structural', 'General'];
+
+export default function ContractorSignup() {
+    const { register } = useAuth();
+    const navigate = useNavigate();
+    const [form, setForm] = useState({ name: '', email: '', phone: '', password: '', confirmPassword: '', specialization: '' });
+    const [showPwd, setShowPwd] = useState(false);
+    const [loading, setLoading] = useState(false);
+    const [errors, setErrors] = useState({});
+
+    const handleChange = (e) => {
+        setForm({ ...form, [e.target.name]: e.target.value });
+        if (errors[e.target.name]) setErrors({ ...errors, [e.target.name]: '' });
+    };
+
+    const validate = () => {
+        const e = {};
+        if (!form.name.trim()) e.name = 'Name is required';
+        if (!form.email.trim()) e.email = 'Email is required';
+        if (!/\S+@\S+\.\S+/.test(form.email)) e.email = 'Invalid email';
+        if (!form.password) e.password = 'Password is required';
+        if (form.password.length < 6) e.password = 'Minimum 6 characters';
+        if (form.password !== form.confirmPassword) e.confirmPassword = 'Passwords do not match';
+        return e;
+    };
+
+    const handleSubmit = async (e) => {
+        e.preventDefault();
+        const errs = validate();
+        if (Object.keys(errs).length) { setErrors(errs); return; }
+        setLoading(true);
+        try {
+            await register({ name: form.name.trim(), company: form.name.trim(), email: form.email.trim().toLowerCase(), phone: form.phone.trim(), password: form.password, role: 'contractor' });
+            toast.success('Contractor account created!');
+            navigate('/contractor/dashboard');
+        } catch (err) {
+            toast.error(err.response?.data?.message || 'Registration failed.');
+        } finally { setLoading(false); }
+    };
+
+    return (
+        <div className="auth-page">
+            {/* LEFT panel */}
+            <div className="auth-left" style={{ background: 'linear-gradient(160deg,#1C1208 0%,#2A1A08 50%,#3A2410 100%)' }}>
+                <div className="auth-brand">
+                    <div className="auth-brand-icon" style={{ background: 'linear-gradient(135deg,var(--amber),var(--amber-light))' }}>
+                        <Wrench size={22} color="#fff" />
+                    </div>
+                    <div>
+                        <div className="auth-brand-name">SnagDetect</div>
+                        <div className="auth-brand-tagline">Contractor Portal</div>
+                    </div>
+                </div>
+
+                <h1 className="auth-left-headline" style={{ position: 'relative', zIndex: 1 }}>
+                    Manage<br />
+                    <span style={{ color: 'var(--amber-light)' }}>Repairs</span><br />
+                    Efficiently
+                </h1>
+                <p className="auth-left-desc" style={{ marginTop: 12, position: 'relative', zIndex: 1 }}>
+                    Receive snag reports, view crack images, and update repair status — keep projects on track.
+                </p>
+
+                <div style={{ marginTop: 32, display: 'flex', flexDirection: 'column', gap: 10, position: 'relative', zIndex: 1 }}>
+                    {[
+                        { icon: <Bell size={16} />, title: 'Instant Notifications', desc: 'Get alerted for new snags' },
+                        { icon: <ClipboardList size={16} />, title: 'Repair Task Management', desc: 'Track pending & resolved jobs' },
+                        { icon: <Wrench size={16} />, title: 'Status Updates', desc: 'Notify engineers when done' },
+                    ].map((f, i) => (
+                        <div key={i} style={{
+                            display: 'flex', gap: 12, alignItems: 'flex-start',
+                            background: 'rgba(255,248,240,0.05)', border: '1px solid rgba(255,248,240,0.08)',
+                            borderRadius: 'var(--r-md)', padding: '12px 14px'
+                        }}>
+                            <div style={{ color: 'var(--amber-light)', marginTop: 1 }}>{f.icon}</div>
+                            <div>
+                                <div style={{ fontSize: 13, fontWeight: 700, color: 'rgba(255,248,240,0.9)' }}>{f.title}</div>
+                                <div style={{ fontSize: 11, color: 'rgba(255,248,240,0.45)', marginTop: 2 }}>{f.desc}</div>
+                            </div>
+                        </div>
+                    ))}
+                </div>
+            </div>
+
+            {/* RIGHT panel */}
+            <div className="auth-right">
+                <div className="auth-card" style={{ maxWidth: 460 }}>
+                    <Link to="/login" style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 13, color: 'var(--text-muted)', marginBottom: 20, fontWeight: 500 }}>
+                        <ArrowLeft size={14} /> Back to login
+                    </Link>
+
+                    <h2 className="auth-right-title">Create Contractor Account</h2>
+                    <p className="auth-right-sub">Register to receive and manage repair tasks</p>
+
+                    {/* Role indicator */}
+                    <div style={{
+                        display: 'flex', alignItems: 'center', gap: 10, padding: '10px 14px',
+                        background: 'rgba(217,119,6,0.06)', border: '1px solid rgba(217,119,6,0.15)',
+                        borderRadius: 'var(--r-md)', marginBottom: 20
+                    }}>
+                        <Wrench size={16} color="var(--amber)" />
+                        <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--amber)' }}>
+                            Account type: <strong>Contractor</strong>
+                        </span>
+                    </div>
+
+                    <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+                        <div className="form-group">
+                            <label className="form-label">Contractor / Company Name *</label>
+                            <div className="input-wrapper">
+                                <Building2 size={15} className="input-icon" />
+                                <input id="con-name" type="text" name="name" className="form-input"
+                                    placeholder="Amit Repairs & Co." value={form.name} onChange={handleChange}
+                                    style={{ paddingLeft: 40 }} />
+                            </div>
+                            {errors.name && <span className="form-error">{errors.name}</span>}
+                        </div>
+
+                        <div className="grid-2" style={{ gap: 12 }}>
+                            <div className="form-group">
+                                <label className="form-label">Email *</label>
+                                <div className="input-wrapper">
+                                    <Mail size={15} className="input-icon" />
+                                    <input id="con-email" type="email" name="email" className="form-input"
+                                        placeholder="contractor@fix.com" value={form.email} onChange={handleChange}
+                                        style={{ paddingLeft: 40 }} />
+                                </div>
+                                {errors.email && <span className="form-error">{errors.email}</span>}
+                            </div>
+                            <div className="form-group">
+                                <label className="form-label">Phone</label>
+                                <div className="input-wrapper">
+                                    <Phone size={15} className="input-icon" />
+                                    <input id="con-phone" type="tel" name="phone" className="form-input"
+                                        placeholder="+91 98765 43210" value={form.phone} onChange={handleChange}
+                                        style={{ paddingLeft: 40 }} />
+                                </div>
+                            </div>
+                        </div>
+
+                        <div className="form-group">
+                            <label className="form-label">Specialization <span style={{ fontWeight: 400, textTransform: 'none', letterSpacing: 0 }}>(optional)</span></label>
+                            <div className="input-wrapper">
+                                <Wrench size={15} className="input-icon" />
+                                <select id="con-specialization" name="specialization" className="form-select form-input"
+                                    value={form.specialization} onChange={handleChange} style={{ paddingLeft: 40 }}>
+                                    <option value="">Select your specialty...</option>
+                                    {SPECIALIZATIONS.map(s => <option key={s} value={s}>{s}</option>)}
+                                </select>
+                            </div>
+                        </div>
+
+                        <div className="form-group">
+                            <label className="form-label">Password *</label>
+                            <div className="input-wrapper" style={{ position: 'relative' }}>
+                                <Lock size={15} className="input-icon" />
+                                <input id="con-password" type={showPwd ? 'text' : 'password'} name="password"
+                                    className="form-input" placeholder="Min. 6 characters"
+                                    value={form.password} onChange={handleChange}
+                                    style={{ paddingLeft: 40, paddingRight: 42 }} />
+                                <button type="button" onClick={() => setShowPwd(!showPwd)} style={{
+                                    position: 'absolute', right: 12, top: '50%', transform: 'translateY(-50%)',
+                                    background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', display: 'flex',
+                                }}>
+                                    {showPwd ? <EyeOff size={15} /> : <Eye size={15} />}
+                                </button>
+                            </div>
+                            {errors.password && <span className="form-error">{errors.password}</span>}
+                        </div>
+
+                        <div className="form-group">
+                            <label className="form-label">Confirm Password *</label>
+                            <div className="input-wrapper">
+                                <Lock size={15} className="input-icon" />
+                                <input id="con-confirm-password" type="password" name="confirmPassword"
+                                    className="form-input" placeholder="Repeat your password"
+                                    value={form.confirmPassword} onChange={handleChange}
+                                    style={{ paddingLeft: 40 }} />
+                            </div>
+                            {errors.confirmPassword && <span className="form-error">{errors.confirmPassword}</span>}
+                        </div>
+
+                        <button id="con-signup-btn" type="submit" className="btn btn-warning btn-full btn-lg"
+                            disabled={loading} style={{ marginTop: 4 }}>
+                            {loading ? <span className="spinner" /> : <><UserPlus size={17} /> Create Account</>}
+                        </button>
+                    </form>
+
+                    <p style={{ textAlign: 'center', fontSize: 12, color: 'var(--text-muted)', marginTop: 20 }}>
+                        Already have an account? <Link to="/login" style={{ fontWeight: 600 }}>Sign in</Link>
+                    </p>
+                </div>
+            </div>
+        </div>
+    );
+}
