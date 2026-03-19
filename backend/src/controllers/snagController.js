@@ -307,12 +307,14 @@ const sendReportToContractor = async (req, res) => {
             return res.status(400).json({ success: false, message: 'contractor_id is required.' });
         }
 
-        // Fetch snag details
+        // Fetch snag details (with image)
         const snagResult = await pool.query(
-            `SELECT s.*, p.project_name
+            `SELECT s.*, p.project_name, i.image_url
        FROM snags s
        LEFT JOIN projects p ON s.project_id = p.project_id
-       WHERE s.snag_id = $1`,
+       LEFT JOIN images i ON s.snag_id = i.snag_id
+       WHERE s.snag_id = $1
+       LIMIT 1`,
             [id]
         );
 

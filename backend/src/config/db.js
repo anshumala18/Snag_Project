@@ -73,6 +73,8 @@ const createTables = async () => {
         recommended_action TEXT,
         status        VARCHAR(30) DEFAULT 'pending' CHECK (status IN ('pending', 'in_progress', 'resolved')),
         ai_detected   BOOLEAN DEFAULT false,
+        ai_confidence FLOAT,
+        ai_result     JSONB,
         sent_to_contractor BOOLEAN DEFAULT false,
         sent_at       TIMESTAMP,
         created_at    TIMESTAMP DEFAULT NOW(),

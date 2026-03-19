@@ -1,4 +1,5 @@
 const nodemailer = require('nodemailer');
+const path = require('path');
 
 // ─── Create transporter (nodemailer v8 compatible) ────────────────────────────
 const createTransporter = () => {
@@ -30,74 +31,87 @@ const sendSnagReportEmail = async ({ contractorEmail, contractorName, snagData }
   try {
     const transporter = createTransporter();
 
-    const color = SEVERITY_COLORS[snagData.severity] || '#6c757d';
-    const emoji = SEVERITY_EMOJIS[snagData.severity] || '⚪';
-    const crackLabel = CRACK_LABELS[snagData.crack_type] || snagData.crack_type;
-    const dateStr = new Date().toLocaleDateString('en-IN', { dateStyle: 'full' });
+    const crackLabel = CRACK_LABELS[snagData.crack_type] || snagData.crack_type || 'Unknown';
+    const severityLabel = (snagData.severity || 'Minor').charAt(0).toUpperCase() + (snagData.severity || 'Minor').slice(1);
+    
+    // Recommendation logic (matching email_agent.py)
+    let recommendation = "No damage detected. No action required.";
+    if (severityLabel === "Low" || severityLabel === "Minor") recommendation = "Minor issue detected. Regular monitoring is advised.";
+    else if (severityLabel === "Medium" || severityLabel === "Moderate") recommendation = "Moderate damage detected. Maintenance is recommended to prevent escalation.";
+    else if (severityLabel === "High" || severityLabel === "Severe") recommendation = "Severe damage detected. Immediate repair action is required.";
 
-    const htmlContent = `
-      <!DOCTYPE html>
-      <html>
-      <head><meta charset="utf-8">
-        <style>
-          body { font-family: Arial, sans-serif; color: #333; margin:0; padding:0; background:#f5f5f5; }
-          .wrap  { max-width:600px; margin:20px auto; background:#fff; border-radius:8px; overflow:hidden; box-shadow:0 2px 10px rgba(0,0,0,.1); }
-          .hdr   { background:#1a1a2e; color:#fff; padding:24px; text-align:center; }
-          .hdr h1{ margin:0; font-size:22px; }
-          .hdr p { margin:6px 0 0; opacity:.8; font-size:13px; }
-          .badge { display:inline-block; background:${color}; color:#fff; padding:4px 14px; border-radius:20px; font-weight:bold; font-size:12px; margin-top:10px; }
-          .body  { padding:28px; }
-          .card  { background:#f8f9fa; border-left:4px solid ${color}; border-radius:4px; padding:16px; margin-bottom:16px; }
-          .row   { display:flex; margin-bottom:8px; font-size:13px; }
-          .lbl   { font-weight:bold; min-width:170px; color:#555; }
-          .desc  { background:#fff8e1; border:1px solid #ffe082; border-radius:4px; padding:14px; margin:14px 0; font-size:13px; }
-          .action{ background:#e8f5e9; border:1px solid #a5d6a7; border-radius:4px; padding:14px; margin:14px 0; font-size:13px; }
-          .btn   { display:block; width:fit-content; margin:22px auto; background:#1a1a2e; color:#fff; padding:12px 30px; border-radius:6px; text-decoration:none; font-weight:bold; font-size:14px; }
-          .ftr   { background:#f8f9fa; padding:16px; text-align:center; font-size:11px; color:#888; }
-        </style>
-      </head>
-      <body>
-        <div class="wrap">
-          <div class="hdr">
-            <h1>🏗️ Snag Detection System</h1>
-            <p>New Snag Report Assigned to You</p>
-            <span class="badge">${emoji} ${(snagData.severity || '').toUpperCase()} SEVERITY</span>
-          </div>
-          <div class="body">
-            <p>Dear <strong>${contractorName}</strong>,</p>
-            <p>A new snag has been detected and requires your attention. Please review the details below.</p>
-            <div class="card">
-              <div class="row"><span class="lbl">Snag ID:</span>       <span><strong>${snagData.snag_code}</strong></span></div>
-              <div class="row"><span class="lbl">Project:</span>       <span>${snagData.project_name || 'N/A'}</span></div>
-              <div class="row"><span class="lbl">Location:</span>      <span>${snagData.location_desc}</span></div>
-              <div class="row"><span class="lbl">Crack Type:</span>    <span>${crackLabel}</span></div>
-              <div class="row"><span class="lbl">Severity:</span>      <span>${emoji} ${(snagData.severity || '').toUpperCase()}</span></div>
-              <div class="row"><span class="lbl">Detection Method:</span><span>AI Vision Model (YOLOv8)</span></div>
-              <div class="row"><span class="lbl">Reported On:</span>   <span>${dateStr}</span></div>
-            </div>
-            <div class="desc">
-              <strong>📝 Description:</strong><br>${snagData.description || 'No description provided.'}
-            </div>
-            <div class="action">
-              <strong>🔧 Recommended Action:</strong><br>${snagData.recommended_action || 'Please inspect and take appropriate action.'}
-            </div>
-            <p style="font-size:13px;color:#666;">Log in to the dashboard to view the full report, image evidence, and update the status.</p>
-            <a href="${process.env.CLIENT_URL || 'http://localhost:3000'}/contractor/dashboard" class="btn">View Report on Dashboard →</a>
-          </div>
-          <div class="ftr">
-            <p>This is an automated message from the Snag Detection System.</p>
-            <p>© ${new Date().getFullYear()} Snag Detection Platform. All rights reserved.</p>
-          </div>
-        </div>
-      </body>
-      </html>
+    const imageFilename = snagData.image_url ? path.basename(snagData.image_url) : 'No image provided';
+    const reportDate = new Date().toISOString().split('T')[0];
+
+    // ─── Email Body (matching email_draft.txt) ───
+    const bodyText = `
+====================================
+     AI INSPECTION NOTIFICATION
+====================================
+
+Dear ${contractorName},
+
+The AI-powered inspection system has successfully analyzed the provided image for project ${snagData.project_name || 'N/A'}.
+
+------------------------------------
+
+Snag ID        : ${snagData.snag_code}
+Image Name     : ${imageFilename}
+Damage Type    : ${crackLabel}
+Severity Level : ${severityLabel}
+Location       : ${snagData.location_desc}
+
+------------------------------------
+
+Recommendation:
+${recommendation}
+
+------------------------------------
+
+The detailed inspection report has been generated and is attached with this email.
+
+Attachment: inspection_report.txt
+
+------------------------------------
+
+Regards,
+AI Snag Detection System
     `;
+
+    // ─── Generate Inspection Report Content (matching report_agent.py) ───
+    const reportContent = `
+==============================
+   BUILDING DAMAGE REPORT
+==============================
+
+Date: ${new Date().toLocaleString()}
+
+--------------------------------
+Snag ID        : ${snagData.snag_code}
+Image Analyzed : ${imageFilename}
+Damage Type    : ${crackLabel}
+Severity Level : ${severityLabel}
+Location       : ${snagData.location_desc}
+--------------------------------
+
+Recommendation:
+${recommendation}
+
+--------------------------------
+Generated by AI Snag Detection System
+`;
 
     const info = await transporter.sendMail({
       from: `"Snag Detection System" <${process.env.EMAIL_FROM || process.env.EMAIL_USER}>`,
       to: contractorEmail,
-      subject: `🚨 [${(snagData.severity || '').toUpperCase()}] New Snag Report – ${snagData.snag_code} | ${snagData.project_name || 'Project'}`,
-      html: htmlContent,
+      subject: `🚨 [${severityLabel.toUpperCase()}] Building Damage Inspection Report – ${snagData.snag_code}`,
+      text: bodyText,
+      attachments: [
+        {
+          filename: 'inspection_report.txt',
+          content: reportContent,
+        }
+      ]
     });
 
     console.log(`✅ Report email sent to ${contractorEmail} | messageId: ${info.messageId}`);
