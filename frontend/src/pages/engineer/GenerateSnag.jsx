@@ -7,6 +7,7 @@ import Sidebar from '../../components/Sidebar';
 import { Camera, Upload, X, AlertTriangle, Loader, MapPin, Calendar, WifiOff } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { useEffect } from 'react';
+//import emailjs from '@emailjs/browser';
 
 const CRACK_TYPES = [
     { value: 'hairline', label: 'Hairline Crack', desc: 'Very thin, cosmetic', icon: '🟢' },
@@ -45,15 +46,71 @@ export default function GenerateSnag() {
     }, []);
 
     // --- Image selection helpers ---
-    const handleFile = (file) => {
-        if (!file) return;
-        if (!file.type.startsWith('image/')) { toast.error('Please select an image file'); return; }
-        setImageFile(file);
-        setImagePreview(URL.createObjectURL(file));
-        setStep(2);
-        simulateAI();
-    };
+    // const handleFile = (file) => {
+    //     if (!file) return;
+    //     if (!file.type.startsWith('image/')) { toast.error('Please select an image file'); return; }
+    //     setImageFile(file);
+    //     setImagePreview(URL.createObjectURL(file));
+    //     setStep(2);
+    //    // simulateAI();
+    // };
+   
+  const handleFile = async (file) => {
+    console.log("HANDLE FILE TRIGGERED");
 
+    if (!file) return;
+
+    setImageFile(file);
+    setImagePreview(URL.createObjectURL(file));
+    setStep(2);
+    setAnalyzing(true);
+
+    try {
+        const fd = new FormData();
+        fd.append('image', file);
+
+        console.log("Sending request...");
+
+        const res = await snagAPI.create(fd);
+
+        console.log("RESPONSE:", res.data);
+
+        const ai = res.data?.ai;
+
+        if (ai) {
+                setAiResult({
+                damage_type: ai.damage_type,
+                severity: ai.severity,
+                confidence: Math.round((ai.confidence || 0.9) * 100),
+                total_detections: ai.total_detections,
+                output_image: ai.output_image
+            });
+        }
+        
+        setForm((prev) => ({
+                ...prev,
+                crack_type: ai.damage_type === "crack" ? "surface" : prev.crack_type,
+                severity:
+                    ai.severity?.toLowerCase() === "minor"
+                        ? "low"
+                        : ai.severity?.toLowerCase() === "moderate"
+                        ? "medium"
+                        : ai.severity?.toLowerCase() === "severe"
+                        ? "high"
+                        : prev.severity,
+            }));
+        
+        
+            setStep(3);
+        
+
+    } catch (err) {
+        console.error(" ERROR:", err);
+        toast.error("AI detection failed");
+    } finally {
+        setAnalyzing(false);
+    }
+};
     const handleDrop = useCallback((e) => {
         e.preventDefault();
         const file = e.dataTransfer.files[0];
@@ -63,22 +120,7 @@ export default function GenerateSnag() {
     const handleDragOver = (e) => e.preventDefault();
 
     // --- Simulate AI detection (real AI will be integrated later) ---
-    const simulateAI = () => {
-        setAnalyzing(true);
-        setAiResult(null);
-        setTimeout(() => {
-            const types = ['hairline', 'surface', 'structural'];
-            const type = types[Math.floor(Math.random() * types.length)];
-            const sevMap = { hairline: 'low', surface: 'medium', structural: 'high' };
-            const conf = Math.floor(Math.random() * 15) + 82; // 82-97%
-            const result = { crack_type: type, severity: sevMap[type], confidence: conf };
-            setAiResult(result);
-            setForm((f) => ({ ...f, crack_type: type, severity: sevMap[type] }));
-            setAnalyzing(false);
-            setStep(3);
-            toast.success('🤖 AI Detection Complete!');
-        }, 2500);
-    };
+    
 
     // --- Submit ---
     const handleSubmit = async (e) => {
@@ -177,8 +219,20 @@ export default function GenerateSnag() {
                         {/* STEP 2 — AI Analysis */}
                         {step === 2 && (
                             <div className="card mt-24 text-center" style={{ padding: 48 }}>
-                                <img src={imagePreview} alt="Snag" className="image-preview" style={{ marginBottom: 24 }} />
-                                {analyzing ? (
+                                <img src={
+                                            aiResult?.output_image
+                                            ? `http://localhost:5000/outputs/outputs/${aiResult.output_image}`
+                                            : imagePreview
+                                        }
+                                        onError={(e) => {
+                                            console.log("Image failed, fallback");
+                                            e.target.src = imagePreview;
+                                        }}
+                                        alt="Snag"
+                                        className="image-preview"
+                                        style={{ marginBottom: 24 }}
+                                        />
+                               {analyzing ? (
                                     <>
                                         <div className="spinner spinner-lg" style={{ margin: '24px auto 16px' }} />
                                         <h3 style={{ fontSize: 17, fontWeight: 700 }}>🤖 Analyzing crack...</h3>
@@ -194,7 +248,15 @@ export default function GenerateSnag() {
                                 {/* Image + AI result side by side */}
                                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 20 }}>
                                     <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
-                                        <img src={imagePreview} alt="Snag" style={{ width: '100%', height: 200, objectFit: 'cover' }} />
+                                        <img
+                                            src={
+                                                aiResult?.output_image
+                                                ? `http://localhost:5000/outputs/${aiResult.output_image}`
+                                                : imagePreview
+                                            }
+                                            alt="Snag"
+                                            style={{ width: '100%', height: 200, objectFit: 'cover' }}
+                                            />
                                         <button onClick={reset} style={{ position: 'absolute', top: 8, right: 8, background: 'rgba(0,0,0,0.6)', border: 'none', borderRadius: 6, color: '#fff', cursor: 'pointer', padding: 4 }}>
                                             <X size={14} />
                                         </button>
@@ -202,24 +264,47 @@ export default function GenerateSnag() {
 
                                     {aiResult && (
                                         <div className="ai-result-card">
-                                            <div className="ai-badge">🤖 AI Detection Result</div>
+                                            <div className="ai-badge"> AI Detection Result</div>
                                             <div style={{ fontSize: 13, color: 'var(--text-secondary)' }}>
-                                                <div style={{ marginBottom: 6 }}><strong>Crack Type:</strong>
-                                                    <span className={`badge badge-${aiResult.crack_type}`} style={{ marginLeft: 8 }}>
-                                                        {CRACK_TYPES.find(c => c.value === aiResult.crack_type)?.label}
-                                                    </span>
+                                                <div style={{ marginBottom: 6 }}>
+                                                    <strong>Damage Type:</strong>
+                                                    <span 
+                                                            className={`badge badge-${aiResult?.damage_type?.toLowerCase()}`} 
+                                                            style={{ marginLeft: 8 }}
+                                                            >
+                                                            {aiResult?.damage_type || "Unknown"}
+                                                            </span>
                                                 </div>
                                                 <div style={{ marginBottom: 6 }}><strong>Severity:</strong>
                                                     <span className={`badge badge-${aiResult.severity}`} style={{ marginLeft: 8 }}>
                                                         {aiResult.severity?.toUpperCase()}
                                                     </span>
                                                 </div>
-                                                <div><strong>Confidence:</strong></div>
+
+                                              <div><strong>Confidence:</strong></div>
+
                                                 <div className="confidence-bar" style={{ marginTop: 6 }}>
-                                                    <div className="confidence-fill" style={{ width: `${aiResult.confidence}%` }} />
+                                                    <div
+                                                        className="confidence-fill"
+                                                        style={{ width: `${aiResult?.confidence || 0}%` }}
+                                                    />
                                                 </div>
+
                                                 <div style={{ textAlign: 'right', fontSize: 12, color: 'var(--accent)', marginTop: 4 }}>
-                                                    {aiResult.confidence}%
+                                                    {aiResult?.confidence || 0}%
+                                                </div>
+
+                                                {/* (DETECTION COUNT) */}
+                                                <div style={{ marginTop: 8 }}>
+                                                   <div style={{
+                                                        marginTop: 10,
+                                                        padding: 6,
+                                                        background: 'var(--bg-card)',
+                                                        borderRadius: 6,
+                                                        textAlign: 'center'
+                                                    }}>
+                                                        {aiResult?.total_detections || 0} cracks detected
+                                                    </div>  
                                                 </div>
                                             </div>
                                         </div>

@@ -1,0 +1,32 @@
+Subject: Building Damage Inspection Report
+
+
+====================================
+     AI INSPECTION NOTIFICATION
+====================================
+
+Dear Stakeholder,
+
+The AI-powered inspection system has successfully analyzed the provided image.
+
+------------------------------------
+
+Image Name     : D:\Mini-eng\snag_project\backend\snag-detection-system\test.jpg
+Damage Type    : rust
+Severity Level : Severe
+
+------------------------------------
+
+Recommendation:
+Severe damage detected. Immediate repair action is required.
+
+------------------------------------
+
+The detailed inspection report has been generated and is attached with this email.
+
+Attachment: inspection_report.txt
+
+------------------------------------
+
+Regards,
+AI Snag Detection System

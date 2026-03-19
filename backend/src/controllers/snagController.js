@@ -3,14 +3,57 @@ const fs = require('fs');
 const { pool } = require('../config/db');
 const { notifyUser } = require('../config/socket');
 const { sendSnagReportEmail, sendStatusUpdateEmail } = require('../utils/emailService');
+const { exec } = require("child_process");
 
-// Helper: generate unique snag code  e.g. CRK-1023
-const generateSnagCode = async () => {
-    const result = await pool.query('SELECT COUNT(*) FROM snags');
-    const count = parseInt(result.rows[0].count) + 1;
-    return `CRK-${String(count).padStart(4, '0')}`;
+
+
+//const aiResult = JSON.parse(jsonString);
+
+function runPythonModel(imagePath) {
+    return new Promise((resolve, reject) => {
+
+        const absolutePath = path.resolve(imagePath);
+
+        exec(
+            `python "./snag-detection-system/pipeline.py" "${absolutePath}"`,
+            { timeout: 10000 },
+            (error, stdout, stderr) => {
+
+                if (error) {
+                    console.error("Python Error:", error);
+                    console.error("STDERR:", stderr);
+                    return reject(error);
+                }
+
+                try {
+                    console.log("RAW OUTPUT:", stdout);
+
+                    const raw = stdout.trim();
+                    const jsonStart = raw.indexOf("{");
+
+                    if (jsonStart === -1) {
+                        return reject(new Error("Invalid Python output"));
+                    }
+
+                    const jsonString = raw.slice(jsonStart);
+
+                    const result = JSON.parse(jsonString);
+
+                    resolve(result);
+
+                } catch (err) {
+                    console.error("Parse Error:", stdout);
+                    reject(err);
+                }
+            }
+        );
+    });
+}
+
+const generateSnagCode = () => {
+    const random = Math.floor(1000 + Math.random() * 9000);
+    return `CRK-${random}`;
 };
-
 // ─── CREATE SNAG (Upload Image + Store Snag) ──────────────────────────────────
 const createSnag = async (req, res) => {
     try {
@@ -24,31 +67,85 @@ const createSnag = async (req, res) => {
         } = req.body;
 
         const reportedBy = req.user.user_id;
+         
+        // AI detection 
+       
+            let aiResult = null;
+            if (req.file) {
+                const imagePath = req.file.path;
 
-        // validate required fields
-        if (!location_desc) {
-            return res.status(400).json({ success: false, message: 'Location description is required.' });
+                try {
+                    aiResult = await runPythonModel(imagePath);
+                    console.log("✅ AI Result:", aiResult);
+                } catch (err) {
+                    console.error("❌ AI FAILED:", err);
+                    return res.status(500).json({
+                        success: false, 
+                        message: "AI processing failed",
+                        error: err.message
+                    });
+                }
+}        
+//  IF ONLY IMAGE UPLOAD → RETURN AI RESULT (NO DB SAVE)
+if (!location_desc) {
+    return res.status(200).json({
+        success: true,
+        ai: aiResult || {
+            damage_type: "crack",
+            severity: "Minor",
+            confidence: 0.9,
+            total_detections: 1,
+            output_image: null
+        }
+    });
+}
+       // const finalCrackType = aiResult?.damage_type || crack_type || null;
+        let finalCrackType = crack_type || null;
+
+        if (aiResult?.damage_type) {
+            const type = aiResult.damage_type.toLowerCase();
+
+            if (type.includes("hairline")) finalCrackType = "hairline";
+            else if (type.includes("surface")) finalCrackType = "surface";
+            else finalCrackType = "structural"; // default
+        }
+        let finalSeverity = severity || null;
+
+        if (aiResult?.severity) {
+            const sev = aiResult.severity.toLowerCase();
+
+            if (sev === "minor") finalSeverity = "low";
+            else if (sev === "moderate") finalSeverity = "medium";
+            else if (sev === "severe") finalSeverity = "high";
         }
 
+        const aiDetected = aiResult ? true : false;
+        const aiConfidence = aiResult?.confidence || null;
+       
         // Generate unique snag code
         const snagCode = await generateSnagCode();
 
+
+            
         // Insert snag into DB
         const snagResult = await pool.query(
             `INSERT INTO snags
-        (snag_code, project_id, reported_by, location_desc, crack_type, severity, description, recommended_action)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
-       RETURNING *`,
-            [
+(snag_code, project_id, reported_by, location_desc, crack_type, severity, description, recommended_action, ai_detected, ai_confidence, ai_result)
+VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)
+RETURNING *`,
+           [
                 snagCode,
                 project_id || null,
                 reportedBy,
                 location_desc,
-                crack_type || null,
-                severity || null,
+                finalCrackType,
+                finalSeverity,
                 description || null,
                 recommended_action || null,
-            ]
+                aiDetected,
+                aiConfidence,
+                aiResult ? JSON.stringify(aiResult) : null
+           ]
         );
 
         const snag = snagResult.rows[0];
@@ -76,6 +173,7 @@ const createSnag = async (req, res) => {
         }
         res.status(500).json({ success: false, message: 'Server error creating snag.' });
     }
+    
 };
 
 // ─── GET ALL SNAGS ────────────────────────────────────────────────────────────
@@ -436,4 +534,4 @@ module.exports = {
     updateSnagStatus,
     deleteSnag,
     getDashboardStats,
-};
+};     

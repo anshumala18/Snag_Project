@@ -31,6 +31,10 @@ const ALLOWED_ORIGINS = [
     'http://127.0.0.1:3000',
 ].filter(Boolean);
 
+app.use(
+  '/outputs',
+  express.static(path.join(__dirname, 'snag-detection-system'))
+);         
 app.use(cors({
     origin: (origin, callback) => {
         // Allow server-to-server requests (no origin) and whitelisted origins

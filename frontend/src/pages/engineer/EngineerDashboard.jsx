@@ -175,7 +175,7 @@ export default function EngineerDashboard() {
     );
 }
 
-function SeverityBar({ label, value, total, color, bg }) {
+function SeverityBar({ label, value, total, color}) {
     const pct = total > 0 ? Math.round((value / total) * 100) : 0;
     return (
         <div>
