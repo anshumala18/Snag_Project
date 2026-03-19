@@ -86,19 +86,31 @@ export default function GenerateSnag() {
                 output_image: ai.output_image
             });
         }
-        
+                const mapDamageToCrackType = (damage) => {
+            if (!damage) return "surface";
+
+            const d = damage.toLowerCase();
+
+            if (d.includes("hair")) return "hairline";
+            if (d.includes("surface")) return "surface";
+            if (d.includes("structural")) return "structural";
+            if (d.includes("crack")) return "surface";
+
+            return "surface";
+        };
+
         setForm((prev) => ({
-                ...prev,
-                crack_type: ai.damage_type === "crack" ? "surface" : prev.crack_type,
-                severity:
-                    ai.severity?.toLowerCase() === "minor"
-                        ? "low"
-                        : ai.severity?.toLowerCase() === "moderate"
-                        ? "medium"
-                        : ai.severity?.toLowerCase() === "severe"
-                        ? "high"
-                        : prev.severity,
-            }));
+            ...prev,
+            crack_type: mapDamageToCrackType(ai.damage_type),
+            severity:
+                ai.severity?.toLowerCase() === "minor"
+                    ? "low"
+                    : ai.severity?.toLowerCase() === "moderate"
+                    ? "medium"
+                    : ai.severity?.toLowerCase() === "severe"
+                    ? "high"
+                    : prev.severity,
+        }));
         
         
             setStep(3);
@@ -345,15 +357,36 @@ export default function GenerateSnag() {
                                                 {CRACK_TYPES.map((ct) => (
                                                     <label key={ct.value} style={{ cursor: 'pointer' }}>
                                                         <input type="radio" name="crack_type" value={ct.value}
-                                                            checked={form.crack_type === ct.value}
+                                                            checked={(form.crack_type || "" )=== ct.value}
                                                             onChange={(e) => setForm({ ...form, crack_type: e.target.value })}
                                                             style={{ display: 'none' }} />
-                                                        <div style={{
-                                                            border: `2px solid ${form.crack_type === ct.value ? 'var(--accent)' : 'var(--border)'}`,
-                                                            borderRadius: 'var(--radius-md)', padding: '12px 10px', textAlign: 'center',
-                                                            background: form.crack_type === ct.value ? 'var(--accent-glow)' : 'transparent',
-                                                            transition: 'all 0.2s',
-                                                        }}>
+                                                        <div
+                                                            style={{
+                                                                border: form.crack_type === ct.value? '2px solid #a95215'   
+                                                                : '2px solid #ccc',
+
+                                                                borderRadius: '12px',
+                                                                padding: '12px 10px',
+                                                                textAlign: 'center',
+
+                                                                background:
+                                                                form.crack_type === ct.value
+                                                                    ? 'rgba(255, 107, 0, 0.1)'  
+                                                                    : '#fff',
+
+                                                                boxShadow:
+                                                                form.crack_type === ct.value
+                                                                    ? '0 0 10px rgba(255, 107, 0, 0.4)' 
+                                                                    : 'none',
+
+                                                                transform:
+                                                                form.crack_type === ct.value
+                                                                    ? 'scale(1.05)'
+                                                                    : 'scale(1)',
+
+                                                                transition: 'all 0.2s ease',
+                                                            }}
+                                                            >
                                                             <div style={{ fontSize: 20, marginBottom: 4 }}>{ct.icon}</div>
                                                             <div style={{ fontSize: 12, fontWeight: 700 }}>{ct.label}</div>
                                                             <div style={{ fontSize: 10, color: 'var(--text-muted)' }}>{ct.desc}</div>
