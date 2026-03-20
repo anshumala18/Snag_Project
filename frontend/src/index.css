@@ -1939,14 +1939,20 @@ tbody tr:last-child td {
 
 /* ── Spinner ────────────────────────────────────────── */
 .spinner {
-  width: 14px;
-  height: 14px;
-  border: 2px solid rgba(255, 255, 255, 0.3);
+  width: 16px;
+  height: 16px;
+  border: 2px solid rgba(0, 0, 0, 0.1);
   border-radius: 50%;
-  border-top-color: #fff;
+  border-top-color: currentColor;
   animation: spin 0.8s linear infinite;
   display: inline-block;
-  margin-top: 2px;
+  vertical-align: middle;
+}
+
+/* Ensure spinner is light on primary buttons */
+.btn-primary .spinner {
+  border-color: rgba(255, 255, 255, 0.2);
+  border-top-color: #fff;
 }
 
 @keyframes spin {
