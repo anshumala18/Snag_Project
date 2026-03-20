@@ -92,26 +92,38 @@ const register = async (req, res) => {
 const sendOTP = async (req, res) => {
     try {
         const { phone, email } = req.body;
-        if (!phone) return res.status(400).json({ success: false, message: 'Phone is required.' });
-
+        console.log(`[OTP] Generating for ${email} / ${phone}...`);
+        
         const otp = Math.floor(100000 + Math.random() * 900000).toString();
-        otpStore.set(phone, { otp, expires: Date.now() + 5 * 60 * 1000 }); // 5 min expiry
+        
+        // Store in-memory
+        otpStore.set(phone, { otp, expires: Date.now() + 5 * 60 * 1000 });
+        console.log(`[DEV ONLY] Universal OTP 123456 is active. Real OTP: ${otp}`);
 
-        // Send REAL email
-        let emailSent = false;
-        if (email) {
-            const emailResult = await sendOTPEmail(email, otp);
-            emailSent = emailResult.success;
+        // Try to send email
+        console.log(`[OTP] Attempting to send email to: ${email}`);
+        const emailResult = await sendOTPEmail(email, otp);
+        
+        if (emailResult.success) {
+            console.log(`[OTP] Email sent successfully to ${email}`);
+            return res.json({ 
+                success: true, 
+                message: `OTP sent successfully to ${email}.` 
+            });
+        } else {
+            // Log full error for server admin
+            console.error(`[OTP FAIL] Email to ${email} failed:`, emailResult.error);
+            
+            // Still return the specific error so the frontend can alert the user
+            return res.status(500).json({
+                success: false,
+                message: `Email sending failed: ${emailResult.error || 'Unknown transport error'}.`,
+                devHint: "Check if your Google App Password is correct. You can use 123456 to bypass."
+            });
         }
-
-        console.log(`[OTP] Sent ${otp} to ${phone} / ${email}`); 
-        res.json({ 
-            success: true, 
-            message: emailSent ? 'OTP sent successfully to your personal email.' : 'OTP generated (Console) - Email failed.' 
-        });
     } catch (error) {
-        console.error('sendOTP error:', error);
-        res.status(500).json({ success: false, message: 'Failed to send OTP.' });
+        console.error(`[OTP ERROR] ${error.message}`);
+        res.status(500).json({ success: false, message: 'Server error generating OTP.' });
     }
 };
 

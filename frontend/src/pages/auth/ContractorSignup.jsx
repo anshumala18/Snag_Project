@@ -248,7 +248,7 @@ export default function ContractorSignup() {
                                     {!otpVerified && (
                                         <button type="button" className="btn btn-secondary btn-sm" 
                                             onClick={handleSendOTP} disabled={sendingOtp || resendTimer > 0}
-                                            style={{ whiteSpace: 'nowrap', minWidth: 100 }}>
+                                            style={{ whiteSpace: 'nowrap', minWidth: 100, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                                             {sendingOtp ? <span className="spinner" /> : resendTimer > 0 ? `Resend (${resendTimer}s)` : 'Send OTP'}
                                         </button>
                                     )}
