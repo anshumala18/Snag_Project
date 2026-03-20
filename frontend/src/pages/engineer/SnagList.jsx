@@ -6,7 +6,9 @@ import SnagEditModal from '../../components/SnagEditModal';
 import { Search, Filter, Send, Eye, Trash2, X, Camera, CheckCircle2, ClipboardList } from 'lucide-react';
 import toast from 'react-hot-toast';
 
-const BACKEND = 'http://localhost:5000';
+import { getBackendRoot } from '../../api/backendUtils';
+
+const BACKEND = getBackendRoot();
 
 export default function SnagList() {
     const [snags, setSnags] = useState([]);

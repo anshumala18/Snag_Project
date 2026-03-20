@@ -5,6 +5,7 @@ import {
     ChevronLeft, PlusCircle, LayoutGrid, FileText, Settings, Eye, Trash2
 } from 'lucide-react';
 import { authAPI, projectAPI, snagAPI } from '../../api';
+import { getBackendRoot } from '../../api/backendUtils';
 import Sidebar from '../../components/Sidebar';
 import SnagEditModal from '../../components/SnagEditModal';
 import toast from 'react-hot-toast';
@@ -81,7 +82,7 @@ export default function ProjectWorkspace() {
         );
     }
 
-    const BACKEND = 'http://localhost:5000';
+    const BACKEND = getBackendRoot();
 
     return (
         <div className="page-wrapper">

@@ -7,7 +7,9 @@ import { useSocket } from '../../hooks/useSocket';
 import { Wrench, CheckCircle, Clock, AlertTriangle, Inbox, Camera } from 'lucide-react';
 import toast from 'react-hot-toast';
 
-const BACKEND = 'http://localhost:5000';
+import { getBackendRoot } from '../../api/backendUtils';
+
+const BACKEND = getBackendRoot();
 
 export default function ContractorDashboard() {
     const { user } = useAuth();

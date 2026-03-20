@@ -5,7 +5,9 @@ import Sidebar from '../../components/Sidebar';
 import { Search, CheckCircle2, Mail, Inbox, Check, Camera, MapPin, Building } from 'lucide-react';
 import toast from 'react-hot-toast';
 
-const BACKEND = 'http://localhost:5000';
+import { getBackendRoot } from '../../api/backendUtils';
+
+const BACKEND = getBackendRoot();
 
 export default function ContractorSnags({ resolvedOnly = false }) {
     const [snags, setSnags] = useState([]);

@@ -5,7 +5,9 @@ import Sidebar from '../../components/Sidebar';
 import { Wrench, CheckCircle, MapPin, AlertTriangle, ArrowLeft, Clock, CheckCircle2, Building, FileText, ClipboardList, Camera } from 'lucide-react';
 import toast from 'react-hot-toast';
 
-const BACKEND = 'http://localhost:5000';
+import { getBackendRoot } from '../../api/backendUtils';
+
+const BACKEND = getBackendRoot();
 
 const CRACK_LABELS = { hairline: 'Hairline Crack', surface: 'Surface Crack', structural: 'Structural Crack' };
 

@@ -24,12 +24,7 @@ const SEVERITIES = [
     { value: 'high', label: 'High', color: 'var(--danger)', desc: 'Urgent attention' },
 ];
 
-const getAIImageUrl = (filename) => {
-    if (!filename) return null;
-    const apiBase = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
-    const serverRoot = apiBase.replace('/api', '');
-    return `${serverRoot}/outputs/${filename}`;
-};
+import { getAIImageUrl, getBackendRoot } from '../../api/backendUtils';
 
 export default function GenerateSnag() {
     const navigate = useNavigate();
