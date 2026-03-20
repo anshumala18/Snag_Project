@@ -16,7 +16,7 @@ function runPythonModel(imagePath) {
 
         exec(
             `python "./snag-detection-system/pipeline.py" "${absolutePath}"`,
-            { timeout: 10000 },
+            { timeout: 60000 },
             (error, stdout, stderr) => {
 
                 if (error) {
@@ -38,6 +38,10 @@ function runPythonModel(imagePath) {
                     const jsonString = raw.slice(jsonStart);
 
                     const result = JSON.parse(jsonString);
+
+                    if (result.error) {
+                        return reject(new Error(result.error));
+                    }
 
                     resolve(result);
 
@@ -101,22 +105,24 @@ if (!location_desc) {
 }
        // const finalCrackType = aiResult?.damage_type || crack_type || null;
         let finalCrackType = crack_type || null;
-
         if (aiResult?.damage_type) {
             const type = aiResult.damage_type.toLowerCase();
-
             if (type.includes("hairline")) finalCrackType = "hairline";
             else if (type.includes("surface")) finalCrackType = "surface";
-            else finalCrackType = "structural"; // default
+            else finalCrackType = "structural"; // default for cracks
+        } else if (aiResult) {
+            finalCrackType = "structural"; // fallback if AI script ran but returned no damage_type
         }
-        let finalSeverity = severity || null;
 
+        let finalSeverity = severity || null;
         if (aiResult?.severity) {
             const sev = aiResult.severity.toLowerCase();
-
-            if (sev === "minor") finalSeverity = "low";
-            else if (sev === "moderate") finalSeverity = "medium";
-            else if (sev === "severe") finalSeverity = "high";
+            if (sev.includes("minor") || sev.includes("low")) finalSeverity = "low";
+            else if (sev.includes("moderate") || sev.includes("medium")) finalSeverity = "medium";
+            else if (sev.includes("severe") || sev.includes("high")) finalSeverity = "high";
+            else finalSeverity = "medium"; // fallback for 'no damage' or unknown
+        } else if (aiResult) {
+            finalSeverity = "medium"; // fallback if AI script ran but returned no severity
         }
 
         const aiDetected = aiResult ? true : false;
@@ -128,12 +134,16 @@ if (!location_desc) {
 
             
         // Insert snag into DB
+        const contractorId = req.body.contractor_id || null;
+        const sentStatus = contractorId ? true : false;
+        const sentAt = contractorId ? 'NOW()' : 'NULL';
+
         const snagResult = await pool.query(
             `INSERT INTO snags
-(snag_code, project_id, reported_by, location_desc, crack_type, severity, description, recommended_action, ai_detected, ai_confidence, ai_result)
-VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)
+(snag_code, project_id, reported_by, location_desc, crack_type, severity, description, recommended_action, ai_detected, ai_confidence, ai_result, assigned_to, sent_to_contractor, sent_at)
+VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,${sentAt})
 RETURNING *`,
-           [
+            [
                 snagCode,
                 project_id || null,
                 reportedBy,
@@ -144,13 +154,14 @@ RETURNING *`,
                 recommended_action || null,
                 aiDetected,
                 aiConfidence,
-                aiResult ? JSON.stringify(aiResult) : null
-           ]
+                aiResult ? JSON.stringify(aiResult) : null,
+                contractorId,
+                sentStatus
+            ]
         );
 
         const snag = snagResult.rows[0];
 
-        // If image was uploaded, store in images table
         if (req.file) {
             const imageUrl = `/uploads/${req.file.filename}`;
             await pool.query(
@@ -158,6 +169,12 @@ RETURNING *`,
          VALUES ($1, $2, $3, $4)`,
                 [snag.snag_id, imageUrl, req.file.originalname, req.file.size]
             );
+        }
+
+        // Notify the user via Socket.io
+        notifyUser(reportedBy, 'snag_created', snag);
+        if (req.body.contractor_id) {
+            notifyUser(req.body.contractor_id, 'snag_assigned', snag);
         }
 
         res.status(201).json({
@@ -187,6 +204,7 @@ const getAllSnags = async (req, res) => {
         s.*,
         u.name  AS reported_by_name,
         u.email AS reported_by_email,
+        c.name  AS assigned_to_name,
         p.project_name,
         COALESCE(
           json_agg(
@@ -195,6 +213,7 @@ const getAllSnags = async (req, res) => {
         ) AS images
       FROM snags s
       LEFT JOIN users    u ON s.reported_by = u.user_id
+      LEFT JOIN users    c ON s.assigned_to = c.user_id
       LEFT JOIN projects p ON s.project_id  = p.project_id
       LEFT JOIN images   i ON s.snag_id     = i.snag_id
     `;
@@ -203,9 +222,10 @@ const getAllSnags = async (req, res) => {
         const values = [];
         let idx = 1;
 
-        // Contractor sees only snags assigned/sent to them
+        // Contractor sees only snags assigned to them
         if (user.role === 'contractor') {
-            conditions.push(`s.sent_to_contractor = true`);
+            conditions.push(`s.assigned_to = $${idx++}`);
+            values.push(user.user_id);
         }
         // Site engineer sees only their own snags
         if (user.role === 'site_engineer') {
@@ -222,7 +242,7 @@ const getAllSnags = async (req, res) => {
             query += ` WHERE ${conditions.join(' AND ')}`;
         }
 
-        query += ` GROUP BY s.snag_id, u.name, u.email, p.project_name ORDER BY s.created_at DESC`;
+        query += ` GROUP BY s.snag_id, u.name, u.email, c.name, p.project_name ORDER BY s.created_at DESC`;
 
         const result = await pool.query(query, values);
         res.json({ success: true, count: result.rows.length, data: result.rows });
@@ -241,6 +261,7 @@ const getSnagById = async (req, res) => {
         s.*,
         u.name  AS reported_by_name,
         u.email AS reported_by_email,
+        c.name  AS assigned_to_name,
         p.project_name,
         COALESCE(
           json_agg(
@@ -249,10 +270,11 @@ const getSnagById = async (req, res) => {
         ) AS images
        FROM snags s
        LEFT JOIN users    u ON s.reported_by = u.user_id
+       LEFT JOIN users    c ON s.assigned_to = c.user_id
        LEFT JOIN projects p ON s.project_id  = p.project_id
        LEFT JOIN images   i ON s.snag_id     = i.snag_id
        WHERE s.snag_id = $1
-       GROUP BY s.snag_id, u.name, u.email, p.project_name`,
+       GROUP BY s.snag_id, u.name, u.email, c.name, p.project_name`,
             [id]
         );
 
@@ -260,7 +282,14 @@ const getSnagById = async (req, res) => {
             return res.status(404).json({ success: false, message: 'Snag not found.' });
         }
 
-        res.json({ success: true, data: result.rows[0] });
+        const snag = result.rows[0];
+
+        // Access check
+        if (req.user.role === 'contractor' && snag.assigned_to !== req.user.user_id) {
+            return res.status(403).json({ success: false, message: 'Access denied.' });
+        }
+
+        res.json({ success: true, data: snag });
     } catch (error) {
         console.error('Get snag error:', error);
         res.status(500).json({ success: false, message: 'Server error.' });
@@ -271,7 +300,7 @@ const getSnagById = async (req, res) => {
 const updateSnag = async (req, res) => {
     try {
         const { id } = req.params;
-        const { crack_type, severity, description, recommended_action, location_desc } = req.body;
+        const { crack_type, severity, description, recommended_action, location_desc, contractor_id } = req.body;
 
         const result = await pool.query(
             `UPDATE snags
@@ -280,10 +309,11 @@ const updateSnag = async (req, res) => {
            description = COALESCE($3, description),
            recommended_action = COALESCE($4, recommended_action),
            location_desc = COALESCE($5, location_desc),
+           assigned_to = COALESCE($6, assigned_to),
            updated_at = NOW()
-       WHERE snag_id = $6
+       WHERE snag_id = $7
        RETURNING *`,
-            [crack_type, severity, description, recommended_action, location_desc, id]
+            [crack_type, severity, description, recommended_action, location_desc, contractor_id || null, id]
         );
 
         if (result.rows.length === 0) {
@@ -355,11 +385,11 @@ const sendReportToContractor = async (req, res) => {
             [id, JSON.stringify(reportData), contractor_id]
         );
 
-        // Mark snag as sent
+        // Mark snag as sent and assign to contractor
         await pool.query(
-            `UPDATE snags SET sent_to_contractor = true, sent_at = NOW(), updated_at = NOW()
+            `UPDATE snags SET sent_to_contractor = true, sent_at = NOW(), assigned_to = $2, updated_at = NOW()
        WHERE snag_id = $1`,
-            [id]
+            [id, contractor_id]
         );
 
         // ── Real-time notification via Socket.IO ──
@@ -409,13 +439,20 @@ const updateSnagStatus = async (req, res) => {
             return res.status(400).json({ success: false, message: `Status must be one of: ${validStatuses.join(', ')}` });
         }
 
-        // Get current status first
+        // Get current status and assignment first
         const current = await pool.query('SELECT * FROM snags WHERE snag_id = $1', [id]);
         if (current.rows.length === 0) {
             return res.status(404).json({ success: false, message: 'Snag not found.' });
         }
 
-        const oldStatus = current.rows[0].status;
+        const snag = current.rows[0];
+
+        // Contractor can only update if they are the assignee
+        if (req.user.role === 'contractor' && snag.assigned_to !== req.user.user_id) {
+            return res.status(403).json({ success: false, message: 'Access denied. This snag is not assigned to you.' });
+        }
+
+        const oldStatus = snag.status;
 
         // Update status
         const updated = await pool.query(
@@ -504,6 +541,9 @@ const getDashboardStats = async (req, res) => {
 
         if (user.role === 'site_engineer') {
             whereClause = 'WHERE reported_by = $1';
+            values.push(user.user_id);
+        } else if (user.role === 'contractor') {
+            whereClause = 'WHERE assigned_to = $1';
             values.push(user.user_id);
         }
 

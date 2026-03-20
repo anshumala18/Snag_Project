@@ -1,12 +1,14 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import {
     LayoutDashboard, FolderOpen, PlusCircle, AlertOctagon,
-    FileText, Wrench, CheckSquare, LogOut, Wifi, WifiOff,
-    HardHat, Building, Menu, X,
+    FileText, Wrench, SquareCheck, LogOut, Wifi, WifiOff,
+    HardHat, Building, Menu, X, UserCircle, TriangleAlert
 } from 'lucide-react';
 import { useOnlineStatus } from '../hooks/useSocket';
+import { getPendingCount, clearOfflineSnags } from '../utils/offlineStorage';
+import toast from 'react-hot-toast';
 
 const EngineerNav = [
     { to: '/engineer/dashboard', icon: <LayoutDashboard size={17} />, label: 'Dashboard' },
@@ -18,7 +20,8 @@ const EngineerNav = [
 const ContractorNav = [
     { to: '/contractor/dashboard', icon: <LayoutDashboard size={17} />, label: 'Dashboard' },
     { to: '/contractor/snags', icon: <Wrench size={17} />, label: 'Assigned Snags' },
-    { to: '/contractor/resolved', icon: <CheckSquare size={17} />, label: 'Completed' },
+    { to: '/contractor/resolved', icon: <SquareCheck size={17} />, label: 'Completed' },
+    { to: '/contractor/update-profile', icon: <UserCircle size={17} />, label: 'Update Profile' },
 ];
 
 export default function Sidebar() {
@@ -26,6 +29,37 @@ export default function Sidebar() {
     const online = useOnlineStatus();
     const navigate = useNavigate();
     const [mobileOpen, setMobileOpen] = useState(false);
+    const [pendingCount, setPendingCount] = useState(0);
+    const [isSyncing, setIsSyncing] = useState(false);
+
+    const handleClearQueue = async () => {
+        if (window.confirm("Are you sure you want to clear all pending offline snags?")) {
+            await clearOfflineSnags();
+            setPendingCount(0);
+            toast.success("Offline queue cleared");
+        }
+    };
+
+    useEffect(() => {
+        const updateCount = async () => {
+            const count = await getPendingCount();
+            setPendingCount(count);
+        };
+        updateCount();
+        
+        const handleSync = () => updateCount();
+        const handleStatus = (e) => setIsSyncing(e.detail);
+        
+        window.addEventListener('snag_synced', handleSync);
+        window.addEventListener('sync_status', handleStatus);
+        
+        const interval = setInterval(updateCount, 5000);
+        return () => {
+            clearInterval(interval);
+            window.removeEventListener('snag_synced', handleSync);
+            window.removeEventListener('sync_status', handleStatus);
+        };
+    }, [online]);
 
     const navItems = isEngineer ? EngineerNav : ContractorNav;
     const initials = user?.name?.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2) || '?';
@@ -56,6 +90,78 @@ export default function Sidebar() {
                     <div className="sidebar-logo-sub">Construction AI Platform</div>
                 </div>
             </div>
+
+            {/* ─── Sync Status Card ─── */}
+            {pendingCount > 0 && (
+                <div style={{ padding: '0 16px', marginBottom: 12 }}>
+                    <div style={{
+                        background: online ? 'rgba(16,185,129,0.1)' : 'rgba(245,158,11,0.1)',
+                        border: `1px solid ${online ? 'rgba(16,185,129,0.2)' : 'rgba(245,158,11,0.2)'}`,
+                        borderRadius: '12px', padding: '12px', position: 'relative'
+                    }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                            <div className={online && isSyncing ? 'sync-pulse' : ''} style={{
+                                width: 32, height: 32, borderRadius: '50%',
+                                background: online ? (isSyncing ? '#10B98120' : '#F59E0B20') : '#F59E0B20',
+                                display: 'flex', alignItems: 'center', justifyContent: 'center', color: online ? (isSyncing ? '#10B981' : '#F59E0B') : '#F59E0B'
+                            }}>
+                                {online ? <Wifi size={16} /> : <WifiOff size={16} />}
+                            </div>
+                            <div style={{ flex: 1 }}>
+                                <div style={{ fontSize: 13, fontWeight: 700, color: online ? (isSyncing ? '#10B981' : '#F59E0B') : '#F59E0B' }}>
+                                    {online ? (isSyncing ? 'Syncing...' : 'Sync Paused') : 'Pending Sync'}
+                                </div>
+                                <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>
+                                    {pendingCount} {pendingCount === 1 ? 'snag' : 'snags'} queued
+                                </div>
+                            </div>
+                        </div>
+                        
+                        {/* Clear button */}
+                        <button 
+                            onClick={handleClearQueue}
+                            style={{
+                                position: 'absolute', top: 8, right: 8,
+                                background: 'transparent', border: 'none',
+                                color: 'rgba(234,88,12,0.6)', cursor: 'pointer',
+                                padding: 4, display: 'flex'
+                            }}
+                            title="Clear Queue"
+                        >
+                            <X size={14} />
+                        </button>
+                    </div>
+                </div>
+            )}
+
+            {/* ─── Profile Incomplete Warning ─── */}
+            {!isEngineer && user && !user.profile_completed && (
+                <div style={{ padding: '0 16px', marginBottom: 12 }}>
+                    <div style={{
+                        background: 'rgba(239,68,68,0.1)',
+                        border: '1px solid rgba(239,68,68,0.2)',
+                        borderRadius: '12px', padding: '12px',
+                    }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                            <div style={{
+                                width: 32, height: 32, borderRadius: '50%',
+                                background: 'rgba(239,68,68,0.2)',
+                                display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#EF4444'
+                            }}>
+                                <TriangleAlert size={16} />
+                            </div>
+                            <div style={{ flex: 1 }}>
+                                <div style={{ fontSize: 13, fontWeight: 700, color: '#EF4444' }}>
+                                    Incomplete Profile
+                                </div>
+                                <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>
+                                    Required for assignments
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
 
             {/* Role badge */}
             <div style={{ padding: '8px 16px' }}>
@@ -95,7 +201,7 @@ export default function Sidebar() {
                 <div className="online-dot" style={{ color: online ? '#4ADE80' : '#FCD34D' }}>
                     {online
                         ? <><Wifi size={13} /><span style={{ fontSize: 11, fontWeight: 600 }}>Connected</span></>
-                        : <><WifiOff size={13} /><span style={{ fontSize: 11, fontWeight: 600 }}>Offline — data queued</span></>
+                        : <><WifiOff size={13} /><span style={{ fontSize: 11, fontWeight: 600 }}>Offline</span></>
                     }
                 </div>
 

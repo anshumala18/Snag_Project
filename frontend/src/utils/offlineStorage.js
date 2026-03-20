@@ -58,3 +58,15 @@ export const getPendingCount = async () => {
     const items = await getPendingSnags();
     return items.length;
 };
+
+// Clear entire queue
+export const clearOfflineSnags = async () => {
+    const db = await openDB();
+    const tx = db.transaction(STORE, 'readwrite');
+    const store = tx.objectStore(STORE);
+    return new Promise((res, rej) => {
+        const req = store.clear();
+        req.onsuccess = () => res();
+        req.onerror = () => rej(req.error);
+    });
+};

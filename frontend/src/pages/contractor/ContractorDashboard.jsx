@@ -4,7 +4,7 @@ import { snagAPI } from '../../api';
 import Sidebar from '../../components/Sidebar';
 import { useAuth } from '../../context/AuthContext';
 import { useSocket } from '../../hooks/useSocket';
-import { Wrench, CheckCircle, Clock, AlertTriangle } from 'lucide-react';
+import { Wrench, CheckCircle, Clock, AlertTriangle, Inbox, Camera } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 const BACKEND = 'http://localhost:5000';
@@ -35,7 +35,9 @@ export default function ContractorDashboard() {
             <main className="main-content">
                 <div className="page-header">
                     <div>
-                        <h1 className="page-title">Contractor Dashboard 🔧</h1>
+                        <h1 className="page-title" style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                            Contractor Dashboard <Wrench size={24} color="var(--orange)" />
+                        </h1>
                         <p className="page-subtitle">Welcome, {user?.name} — manage your assigned repair tasks.</p>
                     </div>
                 </div>
@@ -93,7 +95,9 @@ export default function ContractorDashboard() {
                     {/* Recent assigned snags */}
                     <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
                         <div style={{ padding: '16px 20px', borderBottom: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                            <h3 style={{ fontSize: 15, fontWeight: 700, margin: 0 }}>📩 Recently Assigned</h3>
+                            <h3 style={{ fontSize: 15, fontWeight: 700, margin: 0, display: 'flex', alignItems: 'center', gap: 8 }}>
+                                <Inbox size={17} color="var(--orange)" /> Recently Assigned
+                            </h3>
                             <Link to="/contractor/snags" style={{ fontSize: 13, color: 'var(--accent)' }}>View All →</Link>
                         </div>
                         {loading ? (
@@ -122,7 +126,7 @@ export default function ContractorDashboard() {
                                                 <td>
                                                     {s.images?.[0]?.image_url
                                                         ? <img src={`${BACKEND}${s.images[0].image_url}`} alt="" className="snag-thumb" />
-                                                        : <div className="snag-thumb-placeholder">📷</div>}
+                                                        : <div className="snag-thumb-placeholder"><Camera size={16} /></div>}
                                                 </td>
                                                 <td><span style={{ fontWeight: 700, color: 'var(--accent)' }}>{s.snag_code}</span></td>
                                                 <td style={{ fontSize: 12, maxWidth: 140, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{s.location_desc}</td>

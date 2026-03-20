@@ -21,9 +21,16 @@ export default function Login() {
         if (!form.email || !form.password) return toast.error('Please fill in all fields');
         setLoading(true);
         try {
-            const user = await login(form.email, form.password);
-            toast.success(`Welcome back, ${user.name}!`);
-            navigate(user.role === 'site_engineer' ? '/engineer/dashboard' : '/contractor/dashboard');
+            const userData = await login(form.email, form.password);
+            toast.success(`Welcome back, ${userData.name}!`);
+            
+            if (userData.role === 'site_engineer') {
+                navigate('/engineer/dashboard');
+            } else if (!userData.profile_completed) {
+                navigate('/complete-profile');
+            } else {
+                navigate('/contractor/dashboard');
+            }
         } catch (err) {
             toast.error(err.response?.data?.message || 'Invalid credentials. Please try again.');
         } finally { setLoading(false); }

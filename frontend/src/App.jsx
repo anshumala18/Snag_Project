@@ -19,6 +19,8 @@ import ProjectWorkspace from './pages/engineer/ProjectWorkspace';
 import ContractorDashboard from './pages/contractor/ContractorDashboard';
 import ContractorSnags from './pages/contractor/ContractorSnags';
 import SnagDetail from './pages/contractor/SnagDetail';
+import CompleteProfile from './pages/auth/CompleteProfile';
+import UpdateProfile from './pages/contractor/UpdateProfile';
 
 // ── Protected Route wrapper ────────────────────────────────────
 const ProtectedRoute = ({ children, role }) => {
@@ -37,12 +39,23 @@ const ProtectedRoute = ({ children, role }) => {
   return children;
 };
 
+// ── Contractor Route (Profile Completion Guard) ────────────────
+const ContractorRoute = ({ children }) => {
+  const { user, loading } = useAuth();
+  if (loading) return null;
+  if (!user) return <Navigate to="/login" replace />;
+  if (user.role !== 'contractor') return <Navigate to="/" replace />;
+  if (!user.profile_completed) return <Navigate to="/complete-profile" replace />;
+  return children;
+};
+
 // ── Root redirect ──────────────────────────────────────────────
 const RootRedirect = () => {
   const { user, loading } = useAuth();
   if (loading) return null;
   if (!user) return <Navigate to="/login" replace />;
   if (user.role === 'site_engineer') return <Navigate to="/engineer/dashboard" replace />;
+  if (!user.profile_completed) return <Navigate to="/complete-profile" replace />;
   return <Navigate to="/contractor/dashboard" replace />;
 };
 
@@ -56,6 +69,7 @@ function AppRoutes() {
       <Route path="/login" element={<Login />} />
       <Route path="/signup/engineer" element={<EngineerSignup />} />
       <Route path="/signup/contractor" element={<ContractorSignup />} />
+      <Route path="/complete-profile" element={<ProtectedRoute role="contractor"><CompleteProfile /></ProtectedRoute>} />
 
       {/* Site Engineer routes */}
       <Route path="/engineer/dashboard" element={
@@ -73,13 +87,15 @@ function AppRoutes() {
 
       {/* Contractor routes */}
       <Route path="/contractor/dashboard" element={
-        <ProtectedRoute role="contractor"><ContractorDashboard /></ProtectedRoute>} />
+        <ContractorRoute><ContractorDashboard /></ContractorRoute>} />
       <Route path="/contractor/snags" element={
-        <ProtectedRoute role="contractor"><ContractorSnags /></ProtectedRoute>} />
+        <ContractorRoute><ContractorSnags /></ContractorRoute>} />
       <Route path="/contractor/resolved" element={
-        <ProtectedRoute role="contractor"><ContractorSnags resolvedOnly={true} /></ProtectedRoute>} />
+        <ContractorRoute><ContractorSnags resolvedOnly={true} /></ContractorRoute>} />
       <Route path="/contractor/snags/:id" element={
-        <ProtectedRoute role="contractor"><SnagDetail /></ProtectedRoute>} />
+        <ContractorRoute><SnagDetail /></ContractorRoute>} />
+      <Route path="/contractor/update-profile" element={
+        <ContractorRoute><UpdateProfile /></ContractorRoute>} />
 
       {/* Catch all */}
       <Route path="*" element={<Navigate to="/" replace />} />
@@ -87,7 +103,19 @@ function AppRoutes() {
   );
 }
 
+import { useEffect } from 'react';
+import { useOnlineStatus } from './hooks/useSocket';
+import { triggerSync } from './utils/syncManager';
+
 export default function App() {
+  const online = useOnlineStatus();
+
+  useEffect(() => {
+    if (online) {
+      triggerSync();
+    }
+  }, [online]);
+
   return (
     <AuthProvider>
       <BrowserRouter>

@@ -2,7 +2,8 @@ import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { snagAPI, authAPI } from '../../api';
 import Sidebar from '../../components/Sidebar';
-import { Search, Filter, Send, Eye, Trash2, X } from 'lucide-react';
+import SnagEditModal from '../../components/SnagEditModal';
+import { Search, Filter, Send, Eye, Trash2, X, Camera, CheckCircle2, ClipboardList } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 const BACKEND = 'http://localhost:5000';
@@ -15,12 +16,17 @@ export default function SnagList() {
     const [filterStatus, setFilterStatus] = useState('');
     const [filterSeverity, setFilterSeverity] = useState('');
     const [sendModal, setSendModal] = useState(null); // snag to send
+    const [editModal, setEditModal] = useState(null); // snag to edit/verify
     const [sendContractor, setSendContractor] = useState('');
     const [sending, setSending] = useState(false);
 
     useEffect(() => {
         fetchSnags();
         authAPI.getContractors().then((r) => setContractors(r.data.data)).catch(() => { });
+
+        // Listen for sync events
+        window.addEventListener('snag_synced', fetchSnags);
+        return () => window.removeEventListener('snag_synced', fetchSnags);
     }, [filterStatus, filterSeverity]);
 
     const fetchSnags = async () => {
@@ -40,12 +46,18 @@ export default function SnagList() {
         setSending(true);
         try {
             await snagAPI.sendReport(sendModal.snag_id, { contractor_id: sendContractor });
-            toast.success(`✅ Report sent to contractor!`);
+            toast.success(`Report sent to contractor!`, {
+                icon: <Send size={18} color="var(--success)" />
+            });
             setSendModal(null); setSendContractor('');
             fetchSnags();
         } catch (err) {
             toast.error(err.response?.data?.message || 'Failed to send report');
         } finally { setSending(false); }
+    };
+
+    const handleOpenEdit = (snag) => {
+        setEditModal(snag);
     };
 
     const handleDelete = async (snag) => {
@@ -106,7 +118,9 @@ export default function SnagList() {
                             <div className="text-center" style={{ padding: 60 }}><div className="spinner spinner-lg" style={{ margin: 'auto' }} /></div>
                         ) : filtered.length === 0 ? (
                             <div className="text-center" style={{ padding: 60, color: 'var(--text-muted)' }}>
-                                <div style={{ fontSize: 40, marginBottom: 12 }}>🔍</div>
+                                <div style={{ marginBottom: 16, display: 'flex', justifyContent: 'center' }}>
+                                    <Search size={48} color="var(--text-muted)" opacity={0.5} />
+                                </div>
                                 <p>No snags found</p>
                             </div>
                         ) : (
@@ -129,7 +143,7 @@ export default function SnagList() {
                                             <td>
                                                 {snag.images?.[0]?.image_url
                                                     ? <img src={`${BACKEND}${snag.images[0].image_url}`} alt="" className="snag-thumb" />
-                                                    : <div className="snag-thumb-placeholder">📷</div>
+                                                    : <div className="snag-thumb-placeholder"><Camera size={18} /></div>
                                                 }
                                             </td>
                                             <td><span style={{ fontWeight: 700, color: 'var(--accent)' }}>{snag.snag_code}</span></td>
@@ -141,13 +155,13 @@ export default function SnagList() {
                                                     ? <span className={`badge badge-${snag.crack_type}`}>
                                                         {snag.crack_type.charAt(0).toUpperCase() + snag.crack_type.slice(1)}
                                                     </span>
-                                                    : <span style={{ color: 'var(--text-muted)' }}>—</span>
+                                                    : <span style={{ color: 'var(--warning)', fontWeight: 600 }}>Verify AI</span>
                                                 }
                                             </td>
                                             <td>
                                                 {snag.severity
                                                     ? <span className={`badge badge-${snag.severity}`}>{snag.severity.toUpperCase()}</span>
-                                                    : <span style={{ color: 'var(--text-muted)' }}>—</span>
+                                                    : <span style={{ color: 'var(--warning)', fontWeight: 600 }}>Verify AI</span>
                                                 }
                                             </td>
                                             <td>
@@ -155,17 +169,23 @@ export default function SnagList() {
                                                     {snag.status?.replace('_', ' ').toUpperCase()}
                                                 </span>
                                             </td>
-                                            <td>
+                                             <td>
                                                 {snag.sent_to_contractor
-                                                    ? <span style={{ color: 'var(--success)', fontSize: 12, fontWeight: 600 }}>✅ Sent</span>
+                                                    ? <span style={{ color: 'var(--success)', fontSize: 12, fontWeight: 600, display: 'flex', alignItems: 'center', gap: 6 }}>
+                                                        <CheckCircle2 size={13} /> Sent
+                                                      </span>
                                                     : <span style={{ color: 'var(--text-muted)', fontSize: 12 }}>Not sent</span>
                                                 }
                                             </td>
                                             <td>
                                                 <div className="flex gap-8">
+                                                    <button className="btn btn-sm btn-ghost" title="Edit / Verify AI"
+                                                        onClick={() => handleOpenEdit(snag)}>
+                                                        <Eye size={13} style={{ color: 'var(--accent)' }} />
+                                                    </button>
                                                     {!snag.sent_to_contractor && (
-                                                        <button className="btn btn-sm btn-primary" title="Send to Contractor"
-                                                            onClick={() => { setSendModal(snag); setSendContractor(''); }}>
+                                                        <button className="btn btn-sm btn-primary" title="Send Report"
+                                                            onClick={() => { setSendModal(snag); setSendContractor(snag.assigned_to || ''); }}>
                                                             <Send size={13} />
                                                         </button>
                                                     )}
@@ -184,18 +204,28 @@ export default function SnagList() {
                 </div>
             </main>
 
+            {/* Resume / Edit Modal */}
+            <SnagEditModal 
+                snag={editModal} 
+                contractors={contractors}
+                onClose={() => setEditModal(null)} 
+                onSuccess={fetchSnags} 
+            />
+
             {/* Send Report Modal */}
             {sendModal && (
                 <div className="modal-overlay" onClick={() => setSendModal(null)}>
                     <div className="modal" onClick={(e) => e.stopPropagation()}>
                         <div className="modal-header">
-                            <h2 className="modal-title">📤 Send Report to Contractor</h2>
+                            <h2 className="modal-title" style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                                <Send size={20} color="var(--orange)" /> Send Report to Contractor
+                            </h2>
                             <button className="btn btn-ghost btn-icon" onClick={() => setSendModal(null)}><X size={18} /></button>
                         </div>
                         <div style={{ marginBottom: 16, padding: 14, background: 'var(--bg-card)', borderRadius: 'var(--radius-md)', fontSize: 13 }}>
                             <div><strong>Snag:</strong> {sendModal.snag_code}</div>
                             <div><strong>Location:</strong> {sendModal.location_desc}</div>
-                            <div><strong>Severity:</strong> <span className={`badge badge-${sendModal.severity}`}>{sendModal.severity?.toUpperCase()}</span></div>
+                            <div><strong>Current Detection:</strong> {sendModal.crack_type} / {sendModal.severity?.toUpperCase()}</div>
                         </div>
                         <div className="form-group mb-20">
                             <label className="form-label">Select Contractor *</label>
@@ -208,7 +238,7 @@ export default function SnagList() {
                         <div className="flex gap-12">
                             <button className="btn btn-secondary" style={{ flex: 1 }} onClick={() => setSendModal(null)}>Cancel</button>
                             <button className="btn btn-primary" style={{ flex: 2 }} onClick={handleSendReport} disabled={sending}>
-                                {sending ? <span className="spinner" /> : '📤 Send Report + Email'}
+                                {sending ? <span className="spinner" /> : <><Send size={15} /> Send Report + Email</>}
                             </button>
                         </div>
                     </div>

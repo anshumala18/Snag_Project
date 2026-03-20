@@ -41,11 +41,16 @@ export const AuthProvider = ({ children }) => {
         setUser(null);
     }, []);
 
+    const updateUser = useCallback((u) => {
+        localStorage.setItem('snag_user', JSON.stringify(u));
+        setUser(u);
+    }, []);
+
     const isEngineer = user?.role === 'site_engineer';
     const isContractor = user?.role === 'contractor';
 
     return (
-        <AuthContext.Provider value={{ user, loading, login, register, logout, isEngineer, isContractor }}>
+        <AuthContext.Provider value={{ user, loading, login, register, logout, isEngineer, isContractor, updateUser }}>
             {children}
         </AuthContext.Provider>
     );

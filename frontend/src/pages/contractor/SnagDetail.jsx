@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { snagAPI } from '../../api';
 import Sidebar from '../../components/Sidebar';
-import { Wrench, CheckCircle, MapPin, AlertTriangle, ArrowLeft, Clock } from 'lucide-react';
+import { Wrench, CheckCircle, MapPin, AlertTriangle, ArrowLeft, Clock, CheckCircle2, Building, FileText, ClipboardList, Camera } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 const BACKEND = 'http://localhost:5000';
@@ -29,7 +29,9 @@ export default function SnagDetail() {
         try {
             const res = await snagAPI.updateStatus(id, { status: newStatus, notes });
             setSnag({ ...snag, status: newStatus });
-            toast.success(`✅ Status updated to "${newStatus.replace('_', ' ')}"`);
+            toast.success(`Status updated to "${newStatus.replace('_', ' ')}"`, {
+                icon: <CheckCircle2 size={18} color="var(--success)" />
+            });
             setNotes('');
         } catch (err) {
             toast.error(err.response?.data?.message || 'Failed to update status');
@@ -76,7 +78,9 @@ export default function SnagDetail() {
                             <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
                                 {img
                                     ? <img src={`${BACKEND}${img}`} alt="Crack" style={{ width: '100%', maxHeight: 320, objectFit: 'cover' }} />
-                                    : <div style={{ height: 200, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 60, background: 'var(--bg-card)' }}>📷</div>
+                                    : <div style={{ height: 200, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)', background: 'var(--bg-card)' }}>
+                                        <Camera size={48} opacity={0.5} />
+                                      </div>
                                 }
                             </div>
 
@@ -94,37 +98,45 @@ export default function SnagDetail() {
                                     <InfoRow icon={<Clock size={14} />} label="Reported"
                                         value={new Date(snag.created_at).toLocaleString('en-IN')} />
                                     {snag.project_name && (
-                                        <InfoRow icon="🏗️" label="Project" value={snag.project_name} />
+                                        <InfoRow icon={<Building size={14} />} label="Project" value={snag.project_name} />
                                     )}
                                 </div>
                             </div>
 
                             {/* Description */}
-                            {snag.description && (
-                                <div className="card" style={{ background: 'rgba(245,158,11,0.05)', borderColor: 'rgba(245,158,11,0.2)' }}>
-                                    <h4 style={{ fontSize: 13, fontWeight: 700, color: 'var(--warning)', marginBottom: 8 }}>📝 Description</h4>
-                                    <p style={{ fontSize: 13, color: 'var(--text-secondary)' }}>{snag.description}</p>
-                                </div>
-                            )}
+                                {snag.description && (
+                                    <div className="card" style={{ background: 'rgba(245,158,11,0.05)', borderColor: 'rgba(245,158,11,0.2)' }}>
+                                        <h4 style={{ fontSize: 13, fontWeight: 700, color: 'var(--warning)', marginBottom: 8, display: 'flex', alignItems: 'center', gap: 6 }}>
+                                            <FileText size={14} /> Description
+                                        </h4>
+                                        <p style={{ fontSize: 13, color: 'var(--text-secondary)' }}>{snag.description}</p>
+                                    </div>
+                                )}
 
                             {/* Recommended action */}
-                            {snag.recommended_action && (
-                                <div className="card" style={{ background: 'rgba(16,185,129,0.05)', borderColor: 'rgba(16,185,129,0.2)' }}>
-                                    <h4 style={{ fontSize: 13, fontWeight: 700, color: 'var(--success)', marginBottom: 8 }}>🔧 Recommended Action</h4>
-                                    <p style={{ fontSize: 13, color: 'var(--text-secondary)' }}>{snag.recommended_action}</p>
-                                </div>
-                            )}
+                                {snag.recommended_action && (
+                                    <div className="card" style={{ background: 'rgba(16,185,129,0.05)', borderColor: 'rgba(16,185,129,0.2)' }}>
+                                        <h4 style={{ fontSize: 13, fontWeight: 700, color: 'var(--success)', marginBottom: 8, display: 'flex', alignItems: 'center', gap: 6 }}>
+                                            <Wrench size={14} /> Recommended Action
+                                        </h4>
+                                        <p style={{ fontSize: 13, color: 'var(--text-secondary)' }}>{snag.recommended_action}</p>
+                                    </div>
+                                )}
                         </div>
 
                         {/* Right: Action panel */}
                         <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
                             {/* Status update card */}
                             <div className="card">
-                                <h3 style={{ fontSize: 15, fontWeight: 700, marginBottom: 16 }}>🔧 Update Repair Status</h3>
+                                <h3 style={{ fontSize: 15, fontWeight: 700, marginBottom: 16, display: 'flex', alignItems: 'center', gap: 8 }}>
+                                    <Wrench size={17} color="var(--orange)" /> Update Repair Status
+                                </h3>
 
                                 {snag.status === 'resolved' ? (
                                     <div style={{ textAlign: 'center', padding: '24px 0' }}>
-                                        <div style={{ fontSize: 48, marginBottom: 12 }}>✅</div>
+                                        <div style={{ marginBottom: 16, display: 'flex', justifyContent: 'center' }}>
+                                            <CheckCircle2 size={48} color="var(--success)" />
+                                        </div>
                                         <div style={{ fontSize: 16, fontWeight: 700, color: 'var(--success)' }}>Repair Completed!</div>
                                         <div style={{ fontSize: 13, color: 'var(--text-muted)', marginTop: 6 }}>This snag has been marked as resolved.</div>
                                     </div>
@@ -156,7 +168,9 @@ export default function SnagDetail() {
 
                             {/* Status Timeline */}
                             <div className="card">
-                                <h3 style={{ fontSize: 14, fontWeight: 700, marginBottom: 16 }}>📋 Status Timeline</h3>
+                                <h3 style={{ fontSize: 14, fontWeight: 700, marginBottom: 16, display: 'flex', alignItems: 'center', gap: 8 }}>
+                                    <ClipboardList size={16} color="var(--orange)" /> Status Timeline
+                                </h3>
                                 <div style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
                                     <TimelineItem label="Snag Created" done color="#38bdf8"
                                         date={new Date(snag.created_at).toLocaleDateString('en-IN')} />

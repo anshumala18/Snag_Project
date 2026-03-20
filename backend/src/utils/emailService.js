@@ -176,4 +176,62 @@ const sendStatusUpdateEmail = async ({ engineerEmail, engineerName, snagData, ne
   }
 };
 
-module.exports = { sendSnagReportEmail, sendStatusUpdateEmail };
+// ─── Send OTP Email (Secure Verification) ───────────────────────────────────────
+const sendOTPEmail = async (email, otp) => {
+  try {
+    const transporter = createTransporter();
+
+    const html = `
+      <!DOCTYPE html>
+      <html>
+      <body style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f4f7f6; margin: 0; padding: 0;">
+        <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #f4f7f6; padding: 40px 0;">
+          <tr>
+            <td align="center">
+              <table width="400" cellpadding="0" cellspacing="0" style="background-color: #ffffff; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 15px rgba(0,0,0,0.1);">
+                <tr style="background: linear-gradient(135deg, #1C1208, #3A2410);">
+                  <td align="center" style="padding: 30px;">
+                    <h2 style="color: #ffffff; margin: 0; font-size: 24px; letter-spacing: 1px;">SnagDetect</h2>
+                    <p style="color: rgba(255,255,255,0.7); margin-top: 5px; font-size: 14px;">Verification Portal</p>
+                  </td>
+                </tr>
+                <tr>
+                  <td style="padding: 40px; text-align: center; color: #333333;">
+                    <p style="font-size: 16px; margin-bottom: 25px;">Hello,</p>
+                    <p style="font-size: 15px; line-height: 1.5; color: #666;">To complete your contractor registration, please use the following one-time password (OTP):</p>
+                    <div style="background-color: #f8f9fa; border: 1px dashed #d97706; padding: 20px; border-radius: 8px; margin: 30px 0;">
+                      <span style="font-size: 32px; font-weight: 800; letter-spacing: 10px; color: #d97706;">${otp}</span>
+                    </div>
+                    <p style="font-size: 12px; color: #999; margin-top: 30px;">This code is valid for <strong>5 minutes</strong>. Do not share this with anyone.</p>
+                  </td>
+                </tr>
+                <tr style="background-color: #fafbfc; border-top: 1px solid #eeeeee;">
+                  <td align="center" style="padding: 20px; color: #999; font-size: 11px;">
+                    <p>© ${new Date().getFullYear()} Snag Detection AI Platform.<br/>All rights reserved.</p>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+        </table>
+      </body>
+      </html>
+    `;
+
+    const info = await transporter.sendMail({
+      from: `"SnagDetect Verification" <${process.env.EMAIL_FROM || process.env.EMAIL_USER}>`,
+      to: email,
+      subject: `🗝️ ${otp} is your verification code for SnagDetect`,
+      html,
+    });
+
+    console.log(`✅ OTP email sent to ${email} | messageId: ${info.messageId}`);
+    return { success: true };
+
+  } catch (error) {
+    console.error(`❌ OTP email failed: ${error.message}`);
+    return { success: false, error: error.message };
+  }
+};
+
+module.exports = { sendSnagReportEmail, sendStatusUpdateEmail, sendOTPEmail };

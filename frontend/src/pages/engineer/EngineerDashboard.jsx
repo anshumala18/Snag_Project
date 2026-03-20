@@ -15,11 +15,20 @@ export default function EngineerDashboard() {
     const [loading, setLoading] = useState(true);
     useSocket();
 
-    useEffect(() => {
+    const fetchStats = () => {
+        setLoading(true);
         snagAPI.getStats()
             .then(r => setStats(r.data.data))
             .catch(() => { })
             .finally(() => setLoading(false));
+    };
+
+    useEffect(() => {
+        fetchStats();
+
+        // Listen for sync events
+        window.addEventListener('snag_synced', fetchStats);
+        return () => window.removeEventListener('snag_synced', fetchStats);
     }, []);
 
     const greeting = (() => {

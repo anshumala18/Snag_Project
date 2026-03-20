@@ -38,10 +38,32 @@ const createTables = async () => {
         role        VARCHAR(50) NOT NULL CHECK (role IN ('site_engineer', 'contractor')),
         company     VARCHAR(150),
         phone       VARCHAR(20),
+        license_number   VARCHAR(100),
+        personal_email   VARCHAR(150),
+        company_email    VARCHAR(150),
+        specialization   VARCHAR(100),
+        consent_terms    BOOLEAN DEFAULT false,
+        consent_survey   BOOLEAN DEFAULT false,
+        consent_contact  BOOLEAN DEFAULT false,
+        phone_verified   BOOLEAN DEFAULT false,
+        profile_completed BOOLEAN DEFAULT false,
         is_active   BOOLEAN DEFAULT true,
         created_at  TIMESTAMP DEFAULT NOW(),
         updated_at  TIMESTAMP DEFAULT NOW()
       );
+    `);
+
+    // Migration for existing table
+    await pool.query(`
+      ALTER TABLE users ADD COLUMN IF NOT EXISTS license_number VARCHAR(100);
+      ALTER TABLE users ADD COLUMN IF NOT EXISTS personal_email VARCHAR(150);
+      ALTER TABLE users ADD COLUMN IF NOT EXISTS company_email VARCHAR(150);
+      ALTER TABLE users ADD COLUMN IF NOT EXISTS specialization VARCHAR(100);
+      ALTER TABLE users ADD COLUMN IF NOT EXISTS consent_terms BOOLEAN DEFAULT false;
+      ALTER TABLE users ADD COLUMN IF NOT EXISTS consent_survey BOOLEAN DEFAULT false;
+      ALTER TABLE users ADD COLUMN IF NOT EXISTS consent_contact BOOLEAN DEFAULT false;
+      ALTER TABLE users ADD COLUMN IF NOT EXISTS phone_verified BOOLEAN DEFAULT false;
+      ALTER TABLE users ADD COLUMN IF NOT EXISTS profile_completed BOOLEAN DEFAULT false;
     `);
 
     // Projects table
@@ -77,6 +99,7 @@ const createTables = async () => {
         ai_result     JSONB,
         sent_to_contractor BOOLEAN DEFAULT false,
         sent_at       TIMESTAMP,
+        assigned_to   INT REFERENCES users(user_id) ON DELETE SET NULL,
         created_at    TIMESTAMP DEFAULT NOW(),
         updated_at    TIMESTAMP DEFAULT NOW()
       );

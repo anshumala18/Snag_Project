@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { snagAPI } from '../../api';
 import Sidebar from '../../components/Sidebar';
-import { FileText, FileSpreadsheet, ClipboardList, Clock, Wrench, CheckCircle, Info } from 'lucide-react';
+import { FileText, FileSpreadsheet, ClipboardList, Clock, Wrench, CheckCircle, Info, Trash2 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
@@ -12,11 +12,29 @@ export default function Reports() {
     const [loading, setLoading] = useState(true);
     const [exporting, setExporting] = useState('');
 
-    useEffect(() => {
+    const fetchReports = () => {
+        setLoading(true);
         snagAPI.getAll().then(r => setSnags(r.data.data))
             .catch(() => toast.error('Failed to load snags'))
             .finally(() => setLoading(false));
+    };
+
+    useEffect(() => {
+        fetchReports();
+
+        // Listen for sync events
+        window.addEventListener('snag_synced', fetchReports);
+        return () => window.removeEventListener('snag_synced', fetchReports);
     }, []);
+
+    const handleDelete = async (snag) => {
+        if (!window.confirm(`Permanently delete snag ${snag.snag_code} and all its reports?`)) return;
+        try {
+            await snagAPI.delete(snag.snag_id);
+            toast.success('Record deleted successfully');
+            fetchReports();
+        } catch { toast.error('Failed to delete record'); }
+    };
 
     const exportPDF = async () => {
         setExporting('pdf');
@@ -143,7 +161,7 @@ export default function Reports() {
                                     <tr>
                                         <th>Snag ID</th><th>Project</th><th>Location</th>
                                         <th>Crack Type</th><th>Severity</th><th>Status</th>
-                                        <th>Reported By</th><th>Date</th>
+                                        <th>Reported By</th><th>Date</th><th>Actions</th>
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -159,6 +177,12 @@ export default function Reports() {
                                             <td><span className={`badge badge-${s.status}`}>{s.status?.replace('_', ' ').toUpperCase()}</span></td>
                                             <td>{s.reported_by_name || '—'}</td>
                                             <td style={{ fontSize: 12 }}>{new Date(s.created_at).toLocaleDateString('en-IN')}</td>
+                                            <td>
+                                                <button className="btn btn-sm btn-ghost" title="Delete Record"
+                                                    onClick={() => handleDelete(s)} style={{ color: 'var(--danger)' }}>
+                                                    <Trash2 size={13} />
+                                                </button>
+                                            </td>
                                         </tr>
                                     ))}
                                 </tbody>

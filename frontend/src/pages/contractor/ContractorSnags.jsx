@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { snagAPI } from '../../api';
 import Sidebar from '../../components/Sidebar';
-import { Search } from 'lucide-react';
+import { Search, CheckCircle2, Mail, Inbox, Check, Camera, MapPin, Building } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 const BACKEND = 'http://localhost:5000';
@@ -30,7 +30,9 @@ export default function ContractorSnags({ resolvedOnly = false }) {
             <Sidebar />
             <main className="main-content">
                 <div className="page-header">
-                    <h1 className="page-title">{resolvedOnly ? '✅ Completed Repairs' : '📩 Assigned Snags'}</h1>
+                    <h1 className="page-title" style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                        {resolvedOnly ? <><CheckCircle2 size={24} color="var(--success)" /> Completed Repairs</> : <><Mail size={24} color="var(--orange)" /> Assigned Snags</>}
+                    </h1>
                     <p className="page-subtitle">
                         {resolvedOnly ? 'Snags you have successfully resolved' : 'Snags assigned to you for repair'}
                     </p>
@@ -48,7 +50,9 @@ export default function ContractorSnags({ resolvedOnly = false }) {
                         <div className="text-center" style={{ padding: 60 }}><div className="spinner spinner-lg" style={{ margin: 'auto' }} /></div>
                     ) : filtered.length === 0 ? (
                         <div className="text-center" style={{ padding: 80, color: 'var(--text-muted)' }}>
-                            <div style={{ fontSize: 50, marginBottom: 12 }}>{resolvedOnly ? '🎉' : '📭'}</div>
+                            <div style={{ marginBottom: 20, display: 'flex', justifyContent: 'center' }}>
+                                {resolvedOnly ? <Check size={48} color="var(--success)" opacity={0.5} /> : <Inbox size={48} color="var(--text-muted)" opacity={0.5} />}
+                            </div>
                             <h3 style={{ fontSize: 18, marginBottom: 8 }}>{resolvedOnly ? 'No completed repairs yet' : 'No snags assigned'}</h3>
                             <p>{resolvedOnly ? 'Snags you resolve will appear here' : 'You will be notified when new snags are assigned to you'}</p>
                         </div>
@@ -71,7 +75,9 @@ function SnagCard({ snag }) {
             <div style={{ width: 80, height: 80, borderRadius: 'var(--radius-md)', overflow: 'hidden', flexShrink: 0 }}>
                 {img
                     ? <img src={`${BACKEND}${img}`} alt="crack" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                    : <div style={{ width: '100%', height: '100%', background: 'var(--bg-card)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 32 }}>📷</div>
+                    : <div style={{ width: '100%', height: '100%', background: 'var(--bg-card)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)' }}>
+                        <Camera size={24} />
+                      </div>
                 }
             </div>
 
@@ -83,8 +89,14 @@ function SnagCard({ snag }) {
                     {snag.crack_type && <span className={`badge badge-${snag.crack_type}`}>{snag.crack_type}</span>}
                     <span className={`badge badge-${snag.status}`}>{snag.status?.replace('_', ' ').toUpperCase()}</span>
                 </div>
-                <div style={{ fontSize: 13, color: 'var(--text-secondary)', marginBottom: 4 }}>📍 {snag.location_desc}</div>
-                {snag.project_name && <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>🏗️ {snag.project_name}</div>}
+                <div style={{ fontSize: 13, color: 'var(--text-secondary)', marginBottom: 4, display: 'flex', alignItems: 'center', gap: 6 }}>
+                    <MapPin size={13} color="var(--text-muted)" /> {snag.location_desc}
+                </div>
+                {snag.project_name && (
+                    <div style={{ fontSize: 12, color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: 6 }}>
+                        <Building size={13} /> {snag.project_name}
+                    </div>
+                )}
             </div>
 
             {/* Action */}

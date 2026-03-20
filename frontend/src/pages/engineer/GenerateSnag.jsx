@@ -4,15 +4,19 @@ import { snagAPI, projectAPI, authAPI } from '../../api';
 import { useOnlineStatus } from '../../hooks/useSocket';
 import { saveOfflineSnag } from '../../utils/offlineStorage';
 import Sidebar from '../../components/Sidebar';
-import { Camera, Upload, X, AlertTriangle, Loader, MapPin, Calendar, WifiOff } from 'lucide-react';
+import { 
+    Camera, Upload, X, AlertTriangle, Loader, MapPin, 
+    Calendar, WifiOff, Cpu, Image, ClipboardList, CheckCircle, 
+    AlertOctagon, Send, Smartphone, Zap
+} from 'lucide-react';
 import toast from 'react-hot-toast';
 import { useEffect } from 'react';
 //import emailjs from '@emailjs/browser';
 
 const CRACK_TYPES = [
-    { value: 'hairline', label: 'Hairline Crack', desc: 'Very thin, cosmetic', icon: '🟢' },
-    { value: 'surface', label: 'Surface Crack', desc: 'Visible plaster crack', icon: '🟡' },
-    { value: 'structural', label: 'Structural Crack', desc: 'Deep structural issue', icon: '🔴' },
+    { value: 'hairline', label: 'Hairline Crack', desc: 'Very thin, cosmetic', icon: <CheckCircle size={18} color="var(--success)" /> },
+    { value: 'surface', label: 'Surface Crack', desc: 'Visible plaster crack', icon: <AlertTriangle size={18} color="var(--warning)" /> },
+    { value: 'structural', label: 'Structural Crack', desc: 'Deep structural issue', icon: <AlertOctagon size={18} color="var(--danger)" /> },
 ];
 const SEVERITIES = [
     { value: 'low', label: 'Low', color: 'var(--success)', desc: 'Minor, monitor only' },
@@ -41,8 +45,8 @@ export default function GenerateSnag() {
     });
 
     useEffect(() => {
-        projectAPI.getAll().then((r) => setProjects(r.data.data)).catch(() => { });
-        authAPI.getContractors().then((r) => setContractors(r.data.data)).catch(() => { });
+        projectAPI.getAll().then((r) => setProjects(r.data.data || [])).catch(() => setProjects([]));
+        authAPI.getContractors().then((r) => setContractors(r.data.data || [])).catch(() => setContractors([]));
     }, []);
 
     // --- Image selection helpers ---
@@ -62,8 +66,27 @@ export default function GenerateSnag() {
 
     setImageFile(file);
     setImagePreview(URL.createObjectURL(file));
-    setStep(2);
+    if (!online) {
+        setAnalyzing(false);
+        // Automatically save with minimal details when offline to speed up the process
+        const offlineData = {
+            ...form,
+            location_desc: form.location_desc || `Offline Capture ${new Date().toLocaleTimeString()}`,
+            imagePreview,
+            imageFile,
+            savedAt: new Date().toISOString()
+        };
+        await saveOfflineSnag(offlineData);
+        toast.success("Saved! AI detection will resume once you are online.", { 
+            icon: <Smartphone size={18} color="var(--accent)" />,
+            duration: 6000 
+        });
+        navigate('/engineer/snags');
+        return;
+    }
+
     setAnalyzing(true);
+    setStep(2); // Show the analysis step
 
     try {
         const fd = new FormData();
@@ -72,7 +95,6 @@ export default function GenerateSnag() {
         console.log("Sending request...");
 
         const res = await snagAPI.create(fd);
-
         console.log("RESPONSE:", res.data);
 
         const ai = res.data?.ai;
@@ -81,28 +103,35 @@ export default function GenerateSnag() {
                 setAiResult({
                 damage_type: ai.damage_type,
                 severity: ai.severity,
-                confidence: Math.round((ai.confidence || 0.9) * 100),
+                // Fix confidence bug: only use 90% if ai.confidence is completely missing
+                confidence: ai.confidence !== undefined && ai.confidence !== null 
+                    ? Math.round(ai.confidence * 100) 
+                    : 90,
                 total_detections: ai.total_detections,
                 output_image: ai.output_image
             });
         }
         
+        // Improved mapping for better pre-filling
+        const damageType = ai?.damage_type?.toLowerCase() || '';
+        const aiSeverity = ai?.severity?.toLowerCase() || '';
+
         setForm((prev) => ({
                 ...prev,
-                crack_type: ai.damage_type === "crack" ? "surface" : prev.crack_type,
+                crack_type: damageType.includes("crack") || damageType.includes("hairline") || damageType.includes("structural") 
+                    ? (damageType.includes("hairline") ? "hairline" : (damageType.includes("surface") ? "surface" : "structural"))
+                    : prev.crack_type,
                 severity:
-                    ai.severity?.toLowerCase() === "minor"
-                        ? "low"
-                        : ai.severity?.toLowerCase() === "moderate"
-                        ? "medium"
-                        : ai.severity?.toLowerCase() === "severe"
-                        ? "high"
-                        : prev.severity,
+                    aiSeverity.includes("minor") || aiSeverity.includes("low") ? "low" :
+                    aiSeverity.includes("moderate") || aiSeverity.includes("medium") ? "medium" :
+                    aiSeverity.includes("severe") || aiSeverity.includes("high") ? "high" : 
+                    prev.severity,
             }));
         
-        
+        // Artificial delay for better UX (so user sees the "YOLOv8" message)
+        setTimeout(() => {
             setStep(3);
-        
+        }, 1500);
 
     } catch (err) {
         console.error(" ERROR:", err);
@@ -129,8 +158,11 @@ export default function GenerateSnag() {
 
         if (!online) {
             // Offline: save to IndexedDB
-            await saveOfflineSnag({ ...form, imagePreview, savedAt: new Date().toISOString() });
-            toast.success('📱 Saved offline! Will sync when internet returns.', { duration: 5000 });
+            await saveOfflineSnag({ ...form, imagePreview, imageFile, savedAt: new Date().toISOString() });
+            toast.success('Saved offline! Will sync when internet returns.', { 
+                icon: <Smartphone size={18} color="var(--accent)" />,
+                duration: 5000 
+            });
             navigate('/engineer/snags');
             return;
         }
@@ -147,9 +179,13 @@ export default function GenerateSnag() {
             // If contractor selected → auto send report
             if (form.contractor_id && snagId) {
                 await snagAPI.sendReport(snagId, { contractor_id: form.contractor_id });
-                toast.success(`✅ Snag created & report sent to contractor!`);
+                toast.success(`Snag created & report sent to contractor!`, {
+                    icon: <CheckCircle size={18} color="var(--success)" />
+                });
             } else {
-                toast.success('✅ Snag created successfully!');
+                toast.success('Snag created successfully!', {
+                    icon: <CheckCircle size={18} color="var(--success)" />
+                });
             }
             navigate('/engineer/snags');
         } catch (err) {
@@ -203,7 +239,7 @@ export default function GenerateSnag() {
                                 {/* Drop zone */}
                                 <div className="upload-zone" onDrop={handleDrop} onDragOver={handleDragOver}
                                     onClick={() => fileRef.current?.click()}>
-                                    <div className="upload-zone-icon">🖼️</div>
+                                    <div className="upload-zone-icon"><Image size={42} color="var(--orange)" /></div>
                                     <div className="upload-zone-title">Or drag & drop an image here</div>
                                     <div className="upload-zone-sub">JPEG, PNG, WebP up to 10MB</div>
                                 </div>
@@ -221,7 +257,7 @@ export default function GenerateSnag() {
                             <div className="card mt-24 text-center" style={{ padding: 48 }}>
                                 <img src={
                                             aiResult?.output_image
-                                            ? `http://localhost:5000/outputs/outputs/${aiResult.output_image}`
+                                            ? `http://localhost:5000/outputs/${aiResult.output_image}`
                                             : imagePreview
                                         }
                                         onError={(e) => {
@@ -235,7 +271,9 @@ export default function GenerateSnag() {
                                {analyzing ? (
                                     <>
                                         <div className="spinner spinner-lg" style={{ margin: '24px auto 16px' }} />
-                                        <h3 style={{ fontSize: 17, fontWeight: 700 }}>🤖 Analyzing crack...</h3>
+                                        <h3 style={{ fontSize: 17, fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10 }}>
+                                            <Cpu size={20} className="spinner-fade" /> Analyzing crack...
+                                        </h3>
                                         <p style={{ color: 'var(--text-muted)', marginTop: 8 }}>YOLOv8 is detecting crack type and severity</p>
                                     </>
                                 ) : null}
@@ -264,7 +302,7 @@ export default function GenerateSnag() {
 
                                     {aiResult && (
                                         <div className="ai-result-card">
-                                            <div className="ai-badge"> AI Detection Result</div>
+                                            <div className="ai-badge"><Zap size={12} /> AI Detection Result</div>
                                             <div style={{ fontSize: 13, color: 'var(--text-secondary)' }}>
                                                 <div style={{ marginBottom: 6 }}>
                                                     <strong>Damage Type:</strong>
@@ -313,7 +351,9 @@ export default function GenerateSnag() {
 
                                 {/* Snag Details Form */}
                                 <div className="card">
-                                    <h3 style={{ fontSize: 15, fontWeight: 700, marginBottom: 20 }}>📋 Snag Details <span style={{ color: 'var(--text-muted)', fontSize: 12, fontWeight: 400 }}>(review & edit AI output)</span></h3>
+                                    <h3 style={{ fontSize: 15, fontWeight: 700, marginBottom: 20, display: 'flex', alignItems: 'center', gap: 10 }}>
+                                        <ClipboardList size={18} color="var(--orange)" /> Snag Details <span style={{ color: 'var(--text-muted)', fontSize: 12, fontWeight: 400 }}>(review & edit AI output)</span>
+                                    </h3>
 
                                     <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
                                         {/* Project */}
@@ -322,7 +362,11 @@ export default function GenerateSnag() {
                                             <select className="form-select form-input" value={form.project_id}
                                                 onChange={(e) => setForm({ ...form, project_id: e.target.value })}>
                                                 <option value="">Select project...</option>
-                                                {projects.map((p) => <option key={p.project_id} value={p.project_id}>{p.project_name}</option>)}
+                                                {projects.length > 0 ? (
+                                                    projects.map((p) => <option key={p.project_id} value={p.project_id}>{p.project_name}</option>)
+                                                ) : (
+                                                    <option value="" disabled>No projects available</option>
+                                                )}
                                             </select>
                                         </div>
 
@@ -354,7 +398,7 @@ export default function GenerateSnag() {
                                                             background: form.crack_type === ct.value ? 'var(--accent-glow)' : 'transparent',
                                                             transition: 'all 0.2s',
                                                         }}>
-                                                            <div style={{ fontSize: 20, marginBottom: 4 }}>{ct.icon}</div>
+                                                            <div style={{ fontSize: 20, marginBottom: 8, display: 'flex', justifyContent: 'center' }}>{ct.icon}</div>
                                                             <div style={{ fontSize: 12, fontWeight: 700 }}>{ct.label}</div>
                                                             <div style={{ fontSize: 10, color: 'var(--text-muted)' }}>{ct.desc}</div>
                                                         </div>
@@ -403,7 +447,11 @@ export default function GenerateSnag() {
                                                 <select className="form-select form-input" value={form.contractor_id}
                                                     onChange={(e) => setForm({ ...form, contractor_id: e.target.value })}>
                                                     <option value="">Select contractor...</option>
-                                                    {contractors.map((c) => <option key={c.user_id} value={c.user_id}>{c.name}</option>)}
+                                                    {contractors.length > 0 ? (
+                                                        contractors.map((c) => <option key={c.user_id} value={c.user_id}>{c.name}</option>)
+                                                    ) : (
+                                                        <option value="" disabled>No contractors available</option>
+                                                    )}
                                                 </select>
                                             </div>
                                             {/* Target date */}
@@ -427,7 +475,7 @@ export default function GenerateSnag() {
                                             <button id="submit-snag-btn" type="submit"
                                                 className="btn btn-primary" style={{ flex: 1 }} disabled={submitting}>
                                                 {submitting ? <span className="spinner" /> :
-                                                    form.contractor_id ? '📤 Submit & Send to Contractor' : '💾 Save Snag'}
+                                                    form.contractor_id ? <><Send size={15} /> Submit & Send to Contractor</> : <><CheckCircle size={15} /> Save Snag</>}
                                             </button>
                                         </div>
                                     </form>

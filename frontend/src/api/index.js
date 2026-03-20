@@ -31,6 +31,9 @@ export const authAPI = {
     register: (data) => API.post('/auth/register', data),
     getProfile: () => API.get('/auth/profile'),
     getContractors: () => API.get('/auth/contractors'),
+    sendOTP: (phone, email) => API.post('/auth/send-otp', { phone, email }),
+    verifyOTP: (phone, otp) => API.post('/auth/verify-otp', { phone, otp }),
+    updateProfile: (data) => API.post('/auth/update-profile', data),
 };
 
 // ── Projects ──────────────────────────────────────────────────
