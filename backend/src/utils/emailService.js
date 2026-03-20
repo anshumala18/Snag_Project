@@ -11,9 +11,10 @@ const createTransporter = () => {
     pool: true,
     auth: {
       user: process.env.EMAIL_USER,
-      pass: process.env.EMAIL_PASSWORD,
+      pass: process.env.EMAIL_PASS || process.env.EMAIL_PASSWORD, // Support both
     },
-    // 🔥 FORCING IPv4: The "Nuclear Option" for Render network issues
+    // 🔥 FORCE IPv4: The "Nuclear Option" for Render network issues
+    family: 4, 
     lookup: (hostname, options, callback) => {
       dns.lookup(hostname, { family: 4 }, (err, address, family) => {
         callback(err, address, family);
@@ -23,9 +24,9 @@ const createTransporter = () => {
       ciphers: 'SSLv3',
       rejectUnauthorized: false
     },
-    connectionTimeout: 25000,
-    greetingTimeout: 25000,
-    socketTimeout: 25000,
+    connectionTimeout: 20000,
+    greetingTimeout: 20000,
+    socketTimeout: 20000,
     dnsTimeout: 10000
   });
 };
