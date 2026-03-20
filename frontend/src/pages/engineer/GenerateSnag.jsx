@@ -24,6 +24,13 @@ const SEVERITIES = [
     { value: 'high', label: 'High', color: 'var(--danger)', desc: 'Urgent attention' },
 ];
 
+const getAIImageUrl = (filename) => {
+    if (!filename) return null;
+    const apiBase = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+    const serverRoot = apiBase.replace('/api', '');
+    return `${serverRoot}/outputs/${filename}`;
+};
+
 export default function GenerateSnag() {
     const navigate = useNavigate();
     const online = useOnlineStatus();
@@ -256,7 +263,7 @@ export default function GenerateSnag() {
                             <div className="card mt-24 text-center" style={{ padding: 48 }}>
                                 <img src={
                                             aiResult?.output_image
-                                            ? `http://localhost:5000/outputs/${aiResult.output_image}`
+                                            ? getAIImageUrl(aiResult.output_image)
                                             : imagePreview
                                         }
                                         onError={(e) => {
@@ -288,7 +295,7 @@ export default function GenerateSnag() {
                                         <img
                                             src={
                                                 aiResult?.output_image
-                                                ? `http://localhost:5000/outputs/${aiResult.output_image}`
+                                                ? getAIImageUrl(aiResult.output_image)
                                                 : imagePreview
                                             }
                                             alt="Snag"
