@@ -5,19 +5,20 @@ const path = require('path');
 const createTransporter = () => {
   return nodemailer.createTransport({
     host: 'smtp.gmail.com',
-    port: 465,
-    secure: true, // Use SSL
-    pool: true,   // Use connection pooling for speed
+    port: 587,
+    secure: false, // TLS (STARTTLS)
+    pool: true,
     auth: {
       user: process.env.EMAIL_USER,
       pass: process.env.EMAIL_PASSWORD,
     },
     tls: {
+      ciphers: 'SSLv3',
       rejectUnauthorized: false
     },
-    connectionTimeout: 25000,
-    greetingTimeout: 25000,
-    socketTimeout: 25000,
+    connectionTimeout: 20000,
+    greetingTimeout: 20000,
+    socketTimeout: 20000,
     dnsTimeout: 10000,
     family: 4 // Force IPv4
   });

@@ -133,8 +133,8 @@ const sendOTP = async (req, res) => {
             // Return 200 with success:false to avoid Red Console error and allow Toast to show clearly
             return res.status(400).json({ 
                 success: false, 
-                message: "OTP generated but email delivery failed. Please check your internet or try again later.",
-                dev_note: "Check SMTP configuration or Gmail App Password.",
+                message: `OTP generated but email failed: ${emailResult.error || 'Connection timed out'}.`,
+                dev_note: "If it works locally but not on Render, check if Gmail is blocking the data center IP.",
                 error: emailResult.error
             });
         }
