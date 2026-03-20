@@ -1,5 +1,6 @@
 const nodemailer = require('nodemailer');
 const path = require('path');
+const dns = require('dns');
 
 // ─── Create transporter (nodemailer v8 compatible) ────────────────────────────
 const createTransporter = () => {
@@ -12,15 +13,20 @@ const createTransporter = () => {
       user: process.env.EMAIL_USER,
       pass: process.env.EMAIL_PASSWORD,
     },
+    // 🔥 FORCING IPv4: The "Nuclear Option" for Render network issues
+    lookup: (hostname, options, callback) => {
+      dns.lookup(hostname, { family: 4 }, (err, address, family) => {
+        callback(err, address, family);
+      });
+    },
     tls: {
       ciphers: 'SSLv3',
       rejectUnauthorized: false
     },
-    connectionTimeout: 20000,
-    greetingTimeout: 20000,
-    socketTimeout: 20000,
-    dnsTimeout: 10000,
-    family: 4 // Force IPv4
+    connectionTimeout: 25000,
+    greetingTimeout: 25000,
+    socketTimeout: 25000,
+    dnsTimeout: 10000
   });
 };
 
