@@ -102,6 +102,23 @@ const sendOTP = async (req, res) => {
 
         // Try to send email
         console.log(`[OTP] Attempting to send email to: ${email}`);
+        
+        // Securely log environment status (REDACTED)
+        const userSet = !!process.env.EMAIL_USER;
+        const passSet = !!process.env.EMAIL_PASSWORD;
+        console.log(`[AUTH-DEBUG] Environment Check: EMAIL_USER=${userSet ? 'SET' : 'MISSING'}, EMAIL_PASS=${passSet ? 'SET' : 'MISSING'}`);
+
+        // ─── Verify Connection ───
+        const transporter = createTransporter();
+        try {
+            console.log(`[AUTH-DEBUG] Verifying SMTP connection...`);
+            await transporter.verify();
+            console.log(`[AUTH-DEBUG] SMTP connection verified successfully!`);
+        } catch (vErr) {
+            console.error(`[AUTH-DEBUG] SMTP Verification FAILED: ${vErr.message}`);
+            // We'll still try to send, but we've logged the failure
+        }
+
         const emailResult = await sendOTPEmail(email, otp);
         
         if (emailResult.success) {
@@ -111,14 +128,13 @@ const sendOTP = async (req, res) => {
                 message: `OTP sent successfully to ${email}.` 
             });
         } else {
-            // Log full error for server admin
             console.error(`[OTP FAIL] Email to ${email} failed:`, emailResult.error);
             
-            // Still return the specific error so the frontend can alert the user
-            return res.status(500).json({
+            // Return 200 with success:false to avoid Red Console error and allow Toast to show clearly
+            return res.json({
                 success: false,
-                message: `Email sending failed: ${emailResult.error || 'Unknown transport error'}.`,
-                devHint: "Check if your Google App Password is correct. You can use 123456 to bypass."
+                message: `Email sending failed: ${emailResult.error || 'Connection error'}.`,
+                devHint: "Check your Render Environment Variables. You can use 123456 to bypass while debugging."
             });
         }
     } catch (error) {

@@ -4,20 +4,20 @@ const path = require('path');
 // ─── Create transporter (nodemailer v8 compatible) ────────────────────────────
 const createTransporter = () => {
   return nodemailer.createTransport({
-    host: 'smtp.gmail.com',
-    port: 587,
-    secure: false, // true for 465, false for 587
+    service: 'gmail',
     auth: {
       user: process.env.EMAIL_USER,
       pass: process.env.EMAIL_PASSWORD,
     },
-    // FORCE IPv4 to avoid ENETUNREACH on environments without IPv6 support
-    connectionTimeout: 40000, 
-    greetingTimeout: 40000,
-    socketTimeout: 40000,
-    dnsTimeout: 40000,
-    // This is the key fix for Render IPv6 issues
+    // FORCE IPv4 and increase timeouts for Render network stability
+    connectionTimeout: 45000, 
+    greetingTimeout: 45000,
+    socketTimeout: 45000,
+    dnsTimeout: 45000,
     family: 4, 
+    tls: {
+      rejectUnauthorized: false
+    },
     debug: true,
     logger: true 
   });
