@@ -23,9 +23,10 @@ function runPythonModel(imagePath) {
             (error, stdout, stderr) => {
 
                 if (error) {
-                    console.error("Python Error:", error);
-                    console.error("STDERR:", stderr);
-                    return reject(error);
+                    console.error("❌ Python Execution Error:", error.message);
+                    console.error("❌ STDERR:", stderr);
+                    console.error("❌ STDOUT:", stdout);
+                    return reject(new Error(`AI script failed: ${stderr || error.message}`));
                 }
 
                 try {
