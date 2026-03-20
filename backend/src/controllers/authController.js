@@ -1,7 +1,7 @@
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const { pool } = require('../config/db');
-const { sendOTPEmail } = require('../utils/emailService');
+const { sendOTPEmail, createTransporter } = require('../utils/emailService');
 
 // Generate JWT token
 const generateToken = (userId) => {

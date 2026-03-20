@@ -240,4 +240,4 @@ const sendOTPEmail = async (email, otp) => {
   }
 };
 
-module.exports = { sendSnagReportEmail, sendStatusUpdateEmail, sendOTPEmail };
+module.exports = { createTransporter, sendSnagReportEmail, sendStatusUpdateEmail, sendOTPEmail };
