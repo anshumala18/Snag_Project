@@ -111,18 +111,17 @@ export default function GenerateSnag() {
                 output_image: ai.output_image
             });
         }
-        
         // Improved mapping for better pre-filling
         const damageType = ai?.damage_type?.toLowerCase() || '';
         const aiSeverity = ai?.severity?.toLowerCase() || '';
 
         setForm((prev) => ({
                 ...prev,
-                crack_type: damageType.includes("crack") || damageType.includes("hairline") || damageType.includes("structural") 
-                    ? (damageType.includes("hairline") ? "hairline" : (damageType.includes("surface") ? "surface" : "structural"))
-                    : prev.crack_type,
-                severity:
-                    aiSeverity.includes("minor") || aiSeverity.includes("low") ? "low" :
+                crack_type: damageType.includes("hairline") ? "hairline" : 
+                           (damageType.includes("structural") || damageType.includes("deep") ? "structural" : 
+                           (damageType.includes("surface") || damageType.includes("crack") ? "surface" : prev.crack_type)),
+                severity: 
+                    aiSeverity.includes("minor") || aiSeverity.includes("low") ? "low" : 
                     aiSeverity.includes("moderate") || aiSeverity.includes("medium") ? "medium" :
                     aiSeverity.includes("severe") || aiSeverity.includes("high") ? "high" : 
                     prev.severity,
@@ -389,16 +388,22 @@ export default function GenerateSnag() {
                                                 {CRACK_TYPES.map((ct) => (
                                                     <label key={ct.value} style={{ cursor: 'pointer' }}>
                                                         <input type="radio" name="crack_type" value={ct.value}
-                                                            checked={form.crack_type === ct.value}
+                                                            checked={(form.crack_type || "" )=== ct.value}
                                                             onChange={(e) => setForm({ ...form, crack_type: e.target.value })}
                                                             style={{ display: 'none' }} />
-                                                        <div style={{
-                                                            border: `2px solid ${form.crack_type === ct.value ? 'var(--accent)' : 'var(--border)'}`,
-                                                            borderRadius: 'var(--radius-md)', padding: '12px 10px', textAlign: 'center',
-                                                            background: form.crack_type === ct.value ? 'var(--accent-glow)' : 'transparent',
-                                                            transition: 'all 0.2s',
-                                                        }}>
-                                                            <div style={{ fontSize: 20, marginBottom: 8, display: 'flex', justifyContent: 'center' }}>{ct.icon}</div>
+                                                        <div
+                                                            style={{
+                                                                border: form.crack_type === ct.value ? '2px solid #a95215' : '2px solid #ccc',
+                                                                borderRadius: '12px',
+                                                                padding: '12px 10px',
+                                                                textAlign: 'center',
+                                                                background: form.crack_type === ct.value ? 'rgba(255, 107, 0, 0.1)' : '#fff',
+                                                                boxShadow: form.crack_type === ct.value ? '0 0 10px rgba(255, 107, 0, 0.4)' : 'none',
+                                                                transform: form.crack_type === ct.value ? 'scale(1.05)' : 'scale(1)',
+                                                                transition: 'all 0.2s ease',
+                                                            }}
+                                                            >
+                                                            <div style={{ fontSize: 20, marginBottom: 4 }}>{ct.icon}</div>
                                                             <div style={{ fontSize: 12, fontWeight: 700 }}>{ct.label}</div>
                                                             <div style={{ fontSize: 10, color: 'var(--text-muted)' }}>{ct.desc}</div>
                                                         </div>
