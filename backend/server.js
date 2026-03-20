@@ -23,42 +23,51 @@ initSocket(server);
 
 // ─── Middleware ───────────────────────────────────────────────────────────────
 const ALLOWED_ORIGINS = [
-    process.env.CLIENT_URL,
+    'https://snag-project.vercel.app',
     'http://localhost:5173',
     'http://localhost:5174',
-    'https://snag-project.vercel.app'
+    process.env.CLIENT_URL
 ].filter(Boolean);
 
+console.log('✅ Allowed Origins:', ALLOWED_ORIGINS);
+
+// ─── Static Files for AI Outputs ─────────────────────────────────────────────
 app.use(
   '/outputs',
   express.static(path.join(__dirname, 'snag-detection-system'))
-);         
+);
 
+// 1. Standard CORS Middleware
 app.use(cors({
     origin: (origin, callback) => {
-        if (!origin || ALLOWED_ORIGINS.includes(origin)) {
+        // Allow requests with no origin (like mobile apps or curl)
+        if (!origin) return callback(null, true);
+        
+        if (ALLOWED_ORIGINS.includes(origin)) {
             callback(null, true);
         } else {
-            console.error(`CORS BLOCKED for origin: ${origin}`);
-            callback(new Error(`Not allowed by CORS: ${origin}`));
+            console.warn(`⚠️ CORS blocked for origin: ${origin}`);
+            callback(null, false); // Don't throw error, just don't allow
         }
     },
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization'],
+    allowedHeaders: ['Content-Type', 'Authorization']
 }));
 
-// Manual CORS Pre-flight handler as fallback
+// 2. Extra Safety: Manual Header Fallback for ALL responses
 app.use((req, res, next) => {
     const origin = req.headers.origin;
-    if (ALLOWED_ORIGINS.includes(origin)) {
+    if (origin && ALLOWED_ORIGINS.includes(origin)) {
         res.header('Access-Control-Allow-Origin', origin);
+        res.header('Access-Control-Allow-Credentials', 'true');
     }
-    res.header('Access-Control-Allow-Credentials', 'true');
-    res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, PATCH, DELETE, OPTIONS');
-    res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization');
     
-    if (req.method === 'OPTIONS') return res.sendStatus(200);
+    if (req.method === 'OPTIONS') {
+        res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, PATCH, DELETE, OPTIONS');
+        res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+        return res.sendStatus(200);
+    }
     next();
 });
 
