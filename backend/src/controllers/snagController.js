@@ -14,8 +14,11 @@ function runPythonModel(imagePath) {
 
         const absolutePath = path.resolve(imagePath);
 
+        // Try python3 first, then fallback to python
+        const pythonCmd = process.env.NODE_ENV === 'production' ? 'python3' : 'python';
+        
         exec(
-            `python "./snag-detection-system/pipeline.py" "${absolutePath}"`,
+            `${pythonCmd} "./snag-detection-system/pipeline.py" "${absolutePath}"`,
             { timeout: 60000 },
             (error, stdout, stderr) => {
 

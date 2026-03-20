@@ -4,16 +4,16 @@ const path = require('path');
 // ─── Create transporter (nodemailer v8 compatible) ────────────────────────────
 const createTransporter = () => {
   return nodemailer.createTransport({
-    host: process.env.EMAIL_HOST || 'smtp.gmail.com',
-    port: parseInt(process.env.EMAIL_PORT) || 587,
-    secure: false, // true for port 465
+    service: 'gmail',
+    host: 'smtp.gmail.com',
+    port: 465,
+    secure: true, 
     auth: {
       user: process.env.EMAIL_USER,
       pass: process.env.EMAIL_PASSWORD,
     },
-    tls: {
-      rejectUnauthorized: false, // allow self-signed certs in dev
-    },
+    debug: true,
+    logger: true 
   });
 };
 
