@@ -22,27 +22,25 @@ const server = http.createServer(app);
 initSocket(server);
 
 // ─── Middleware ───────────────────────────────────────────────────────────────
-// Accept multiple origins so Vite (5173) and CRA (3000) both work
 const ALLOWED_ORIGINS = [
     process.env.CLIENT_URL,
     'http://localhost:5173',
     'http://localhost:5174',
-    'http://localhost:3000',
-    'http://127.0.0.1:5173',
-    'http://127.0.0.1:3000',
+    'https://snag-project.vercel.app'
 ].filter(Boolean);
 
 app.use(
   '/outputs',
   express.static(path.join(__dirname, 'snag-detection-system'))
 );         
+
 app.use(cors({
     origin: (origin, callback) => {
-        // Allow server-to-server requests (no origin) and whitelisted origins
         if (!origin || ALLOWED_ORIGINS.includes(origin)) {
             callback(null, true);
         } else {
-            callback(new Error(`CORS blocked for origin: ${origin}`));
+            console.error(`CORS BLOCKED for origin: ${origin}`);
+            callback(new Error(`Not allowed by CORS: ${origin}`));
         }
     },
     credentials: true,
@@ -50,8 +48,19 @@ app.use(cors({
     allowedHeaders: ['Content-Type', 'Authorization'],
 }));
 
-// Handle OPTIONS preflight globally
-app.options('*', cors());
+// Manual CORS Pre-flight handler as fallback
+app.use((req, res, next) => {
+    const origin = req.headers.origin;
+    if (ALLOWED_ORIGINS.includes(origin)) {
+        res.header('Access-Control-Allow-Origin', origin);
+    }
+    res.header('Access-Control-Allow-Credentials', 'true');
+    res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, PATCH, DELETE, OPTIONS');
+    res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+    
+    if (req.method === 'OPTIONS') return res.sendStatus(200);
+    next();
+});
 
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
