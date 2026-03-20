@@ -55,6 +55,8 @@ export const snagAPI = {
     update: (id, data) => API.put(`/snags/${id}`, data),
     delete: (id) => API.delete(`/snags/${id}`),
     sendReport: (id, data) => API.post(`/snags/${id}/send-report`, data),
+    getPreviewReport: (id) => API.get(`/snags/${id}/preview-report`),
+    getMailLogs: () => API.get('/snags/mail-logs'),
     updateStatus: (id, data) => API.patch(`/snags/${id}/status`, data),
 };
 

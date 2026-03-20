@@ -72,6 +72,8 @@ const createSnag = async (req, res) => {
             severity,
             description,
             recommended_action,
+            latitude,
+            longitude
         } = req.body;
 
         const reportedBy = req.user.user_id;
@@ -131,21 +133,21 @@ if (!location_desc) {
 
         const aiDetected = aiResult ? true : false;
         const aiConfidence = aiResult?.confidence || null;
-       
+        
+        // AI result parsing logic continues...
+
         // Generate unique snag code
         const snagCode = await generateSnagCode();
 
-
-            
         // Insert snag into DB
         const contractorId = req.body.contractor_id || null;
-        const sentStatus = contractorId ? true : false;
-        const sentAt = contractorId ? 'NOW()' : 'NULL';
+        const sentStatus = false; 
+        const sentAt = 'NULL';
 
         const snagResult = await pool.query(
             `INSERT INTO snags
-(snag_code, project_id, reported_by, location_desc, crack_type, severity, description, recommended_action, ai_detected, ai_confidence, ai_result, assigned_to, sent_to_contractor, sent_at)
-VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,${sentAt})
+(snag_code, project_id, reported_by, location_desc, crack_type, severity, description, recommended_action, ai_detected, ai_confidence, ai_result, assigned_to, sent_to_contractor, sent_at, latitude, longitude)
+VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,${sentAt}, $14, $15)
 RETURNING *`,
             [
                 snagCode,
@@ -160,7 +162,9 @@ RETURNING *`,
                 aiConfidence,
                 aiResult ? JSON.stringify(aiResult) : null,
                 contractorId,
-                sentStatus
+                sentStatus,
+                latitude || null,
+                longitude || null
             ]
         );
 
@@ -187,12 +191,12 @@ RETURNING *`,
             data: snag,
         });
     } catch (error) {
-        console.error('Create snag error:', error);
-        // cleanup uploaded file on error
+        console.error('CRITICAL ERROR during snag creation:', error);
+        console.error('Request Body:', req.body);
         if (req.file) {
             fs.unlink(req.file.path, () => { });
         }
-        res.status(500).json({ success: false, message: 'Server error creating snag.' });
+        res.status(500).json({ success: false, message: 'Server error creating snag: ' + error.message });
     }
     
 };
@@ -233,7 +237,7 @@ const getAllSnags = async (req, res) => {
         }
         // Site engineer sees only their own snags
         if (user.role === 'site_engineer') {
-            conditions.push(`s.reported_by = $${idx++}`);
+            conditions.push(`(s.reported_by = $${idx++} OR s.reported_by IS NULL)`);
             values.push(user.user_id);
         }
 
@@ -320,10 +324,6 @@ const updateSnag = async (req, res) => {
             [crack_type, severity, description, recommended_action, location_desc, contractor_id || null, id]
         );
 
-        if (result.rows.length === 0) {
-            return res.status(404).json({ success: false, message: 'Snag not found.' });
-        }
-
         res.json({ success: true, message: 'Snag updated successfully.', data: result.rows[0] });
     } catch (error) {
         console.error('Update snag error:', error);
@@ -331,11 +331,11 @@ const updateSnag = async (req, res) => {
     }
 };
 
-// ─── SEND REPORT TO CONTRACTOR ────────────────────────────────────────────────
+// ─── SEND REPORT TO CONTRACTOR ───────────────────────────────────────────────────────────────────────────────────────────
 const sendReportToContractor = async (req, res) => {
     try {
         const { id } = req.params;
-        const { contractor_id } = req.body;
+        const { contractor_id, customSubject, customBody, reportData: editedReportData } = req.body;
 
         if (!contractor_id) {
             return res.status(400).json({ success: false, message: 'contractor_id is required.' });
@@ -370,8 +370,8 @@ const sendReportToContractor = async (req, res) => {
 
         const contractor = contractorResult.rows[0];
 
-        // Build report data
-        const reportData = {
+        // Build report data (use edited if provided, else generate default)
+        const finalReportData = editedReportData || {
             snag_code: snag.snag_code,
             project_name: snag.project_name,
             location_desc: snag.location_desc,
@@ -386,7 +386,7 @@ const sendReportToContractor = async (req, res) => {
         await pool.query(
             `INSERT INTO reports (snag_id, report_data, sent_to, sent_at)
        VALUES ($1, $2, $3, NOW())`,
-            [id, JSON.stringify(reportData), contractor_id]
+            [id, JSON.stringify(finalReportData), contractor_id]
         );
 
         // Mark snag as sent and assign to contractor
@@ -400,19 +400,22 @@ const sendReportToContractor = async (req, res) => {
         notifyUser(contractor_id, 'new_snag_report', {
             message: `New snag report assigned: ${snag.snag_code}`,
             snag_code: snag.snag_code,
-            severity: snag.severity,
-            crack_type: snag.crack_type,
-            location: snag.location_desc,
+            severity: finalReportData.severity || snag.severity,
+            crack_type: finalReportData.crack_type || snag.crack_type,
+            location: finalReportData.location_desc || snag.location_desc,
             timestamp: new Date(),
         });
 
         // ── Send email to contractor ──
         let emailResult = { success: false, error: 'Email not configured' };
-        if (process.env.EMAIL_USER && process.env.EMAIL_PASSWORD) {
+        if (process.env.EMAIL_USER && (process.env.EMAIL_PASS || process.env.EMAIL_PASSWORD)) {
             emailResult = await sendSnagReportEmail({
                 contractorEmail: contractor.email,
                 contractorName: contractor.name,
                 snagData: { ...snag, project_name: snag.project_name },
+                customSubject,
+                customBody,
+                userId: req.user.user_id
             });
         }
 
@@ -429,6 +432,90 @@ const sendReportToContractor = async (req, res) => {
     } catch (error) {
         console.error('Send report error:', error);
         res.status(500).json({ success: false, message: 'Server error sending report.' });
+    }
+};
+
+// ─── GET REPORT PREVIEW ───────────────────────────────────────────────────────
+const getReportPreview = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const snagResult = await pool.query(
+            `SELECT s.*, p.project_name, i.image_url 
+             FROM snags s 
+             LEFT JOIN projects p ON s.project_id = p.project_id 
+             LEFT JOIN images i ON s.snag_id = i.snag_id
+             WHERE s.snag_id = $1`,
+            [id]
+        );
+
+        if (snagResult.rows.length === 0) {
+            return res.status(404).json({ success: false, message: 'Snag not found.' });
+        }
+
+        const snag = snagResult.rows[0];
+        const severity = (snag.severity || 'Minor').charAt(0).toUpperCase() + (snag.severity || 'Minor').slice(1);
+        
+        let recommendation = "Minor issue detected. Regular monitoring is advised.";
+        if (severity === "Medium" || severity === "Moderate") recommendation = "Moderate damage detected. Maintenance is recommended.";
+        else if (severity === "High" || severity === "Severe") recommendation = "Severe damage detected. Immediate repair required.";
+
+        const reportData = {
+            snag_code: snag.snag_code,
+            project_name: snag.project_name || 'N/A',
+            location_desc: snag.location_desc,
+            crack_type: snag.crack_type,
+            severity: snag.severity,
+            description: snag.description || '',
+            recommended_action: recommendation,
+        };
+
+        const emailSubject = `🚨 [${severity.toUpperCase()}] Building Damage Inspection Report – ${snag.snag_code}`;
+        const emailBody = `
+Dear Contractor,
+
+The AI inspection system has analyzed a potential issue at ${snag.location_desc}.
+
+Snag Details:
+- ID: ${snag.snag_code}
+- Type: ${snag.crack_type}
+- Severity: ${severity}
+
+Recommendation: ${recommendation}
+
+Please review the attached report for full details.
+        `.trim();
+
+        res.json({
+            success: true,
+            data: { 
+                reportData, 
+                emailSubject, 
+                emailBody,
+                email: { subject: emailSubject, body: emailBody }
+            }
+        });
+    } catch (error) {
+        console.error('Preview error:', error);
+        res.status(500).json({ success: false, message: 'Error generating preview.' });
+    }
+};
+
+// ─── GET MAIL LOGS ────────────────────────────────────────────────────────────
+const getMailLogs = async (req, res) => {
+    try {
+        const result = await pool.query(
+            `SELECT m.*, s.snag_code, u.name as sender_name 
+             FROM mail_logs m
+             LEFT JOIN snags s ON m.snag_id = s.snag_id
+             LEFT JOIN users u ON m.user_id = u.user_id
+             WHERE m.user_id = $1
+             ORDER BY m.sent_at DESC`,
+            [req.user.user_id]
+        );
+        res.json({ success: true, data: result.rows });
+    } catch (error) {
+        console.error('Mail logs error:', error);
+        res.status(500).json({ success: false, message: 'Error fetching mail logs.' });
     }
 };
 
@@ -544,7 +631,7 @@ const getDashboardStats = async (req, res) => {
         const values = [];
 
         if (user.role === 'site_engineer') {
-            whereClause = 'WHERE reported_by = $1';
+            whereClause = 'WHERE (reported_by = $1 OR reported_by IS NULL)';
             values.push(user.user_id);
         } else if (user.role === 'contractor') {
             whereClause = 'WHERE assigned_to = $1';
@@ -576,8 +663,10 @@ module.exports = {
     getAllSnags,
     getSnagById,
     updateSnag,
+    getReportPreview,
+    getMailLogs,
     sendReportToContractor,
     updateSnagStatus,
     deleteSnag,
     getDashboardStats,
-};     
+};

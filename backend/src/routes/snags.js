@@ -52,9 +52,15 @@ router.use(authMiddleware);
 // Dashboard stats
 router.get('/stats', snagController.getDashboardStats);
 
+// Mail logs (new)
+router.get('/mail-logs', snagController.getMailLogs);
+
 // CRUD
 router.get('/', snagController.getAllSnags);
 router.get('/:id', snagController.getSnagById);
+
+// Preview report
+router.get('/:id/preview-report', snagController.getReportPreview);
 
 // Create
 router.post(

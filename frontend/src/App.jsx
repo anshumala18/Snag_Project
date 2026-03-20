@@ -13,7 +13,9 @@ import Projects from './pages/engineer/Projects';
 import GenerateSnag from './pages/engineer/GenerateSnag';
 import SnagList from './pages/engineer/SnagList';
 import Reports from './pages/engineer/Reports';
+import MailLogs from './pages/engineer/MailLogs';
 import ProjectWorkspace from './pages/engineer/ProjectWorkspace';
+import OfflineSync from './pages/engineer/OfflineSync';
 
 // Contractor pages
 import ContractorDashboard from './pages/contractor/ContractorDashboard';
@@ -84,6 +86,10 @@ function AppRoutes() {
         <ProtectedRoute role="site_engineer"><SnagList /></ProtectedRoute>} />
       <Route path="/engineer/reports" element={
         <ProtectedRoute role="site_engineer"><Reports /></ProtectedRoute>} />
+      <Route path="/engineer/mail" element={
+        <ProtectedRoute role="site_engineer"><MailLogs /></ProtectedRoute>} />
+      <Route path="/engineer/offline" element={
+        <ProtectedRoute role="site_engineer"><OfflineSync /></ProtectedRoute>} />
 
       {/* Contractor routes */}
       <Route path="/contractor/dashboard" element={

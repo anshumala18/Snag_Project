@@ -35,3 +35,10 @@ backend/debug-*
 backend/test-*
 backend/check-*
 backend/cleanup-*
+
+# AI System Outputs/Feedback
+backend/snag-detection-system/output_*.jpg
+backend/snag-detection-system/feedback_images/
+backend/snag-detection-system/feedback.json
+backend/email_draft.txt
+backend/inspection_report.txt

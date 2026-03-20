@@ -107,9 +107,17 @@ const createTables = async () => {
         sent_to_contractor BOOLEAN DEFAULT false,
         sent_at       TIMESTAMP,
         assigned_to   INT REFERENCES users(user_id) ON DELETE SET NULL,
+        latitude      DECIMAL(10, 8),
+        longitude     DECIMAL(11, 8),
         created_at    TIMESTAMP DEFAULT NOW(),
         updated_at    TIMESTAMP DEFAULT NOW()
       );
+    `);
+
+    // Migration for existing table
+    await pool.query(`
+      ALTER TABLE snags ADD COLUMN IF NOT EXISTS latitude DECIMAL(10, 8);
+      ALTER TABLE snags ADD COLUMN IF NOT EXISTS longitude DECIMAL(11, 8);
     `);
 
     // Images table
@@ -148,6 +156,20 @@ const createTables = async () => {
         new_status  VARCHAR(30),
         notes       TEXT,
         updated_at  TIMESTAMP DEFAULT NOW()
+      );
+    `);
+
+    // Mail logs table
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS mail_logs (
+        log_id        SERIAL PRIMARY KEY,
+        recipient     VARCHAR(150) NOT NULL,
+        subject       VARCHAR(255) NOT NULL,
+        content       TEXT,
+        snag_id       INT REFERENCES snags(snag_id) ON DELETE SET NULL,
+        user_id       INT REFERENCES users(user_id) ON DELETE SET NULL,
+        status        VARCHAR(50) DEFAULT 'sent',
+        sent_at       TIMESTAMP DEFAULT NOW()
       );
     `);
 

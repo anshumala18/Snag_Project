@@ -2,6 +2,7 @@ from vision_agent import detect_snag
 from analysis_agent import analyze
 from report_agent import generate_report
 from draw_boxes import filter_predictions, merge_boxes, draw_merged_box
+from learning_agent import store_feedback
 
 import sys
 import json
@@ -92,7 +93,76 @@ def run_pipeline(image):
 # ENTRY POINT (FOR NODE)
 # ---------------------------
 if __name__ == "__main__":
+    if len(sys.argv) < 2:
+        print("Usage: python pipeline.py <image_path>")
+        sys.exit(1)
+
     image_path = sys.argv[1]
     result = run_pipeline(image_path)
 
-    print(json.dumps(result))
+    # ---------------------------
+    # INTERACTIVE FEEDBACK SECTION (New Feature)
+    # ---------------------------
+    if sys.stdin.isatty():
+        print("\nFeedback Section")
+        is_correct = input("Is prediction correct? (yes/no): ").strip().lower()
+
+        if is_correct == "no":
+            correct_damage = input("Enter correct damage type: ").strip()
+            correct_severity = input("Enter correct severity (Minor/Moderate/Severe): ").strip()
+            
+            give_bbox = input("Do you want to give bounding box? (yes/no): ").strip().lower()
+            corrected_bbox = None
+            
+            if give_bbox == "yes":
+                try:
+                    print("Enter bounding box coordinates:")
+                    x1 = int(input("  Top-left X: "))
+                    y1 = int(input("  Top-left Y: "))
+                    x2 = int(input("  Bottom-right X: "))
+                    y2 = int(input("  Bottom-right Y: "))
+                    corrected_bbox = [x1, y1, x2, y2]
+                except ValueError:
+                    print("Invalid coordinates. Skipping bbox.")
+
+            # Store feedback for learning
+            store_feedback(
+                image_path, result.get("predictions", []),
+                result["damage_type"], correct_damage,
+                result["severity"], correct_severity,
+                corrected_bbox
+            )
+
+            # Re-generate visuals/reports with feedback
+            # from draw_boxes import draw_merged_box # Already imported
+            # from report_agent import generate_report # Already imported
+
+            # Use corrected bbox or the merged one
+            final_bbox = corrected_bbox if corrected_bbox else []
+            
+            # Update output image
+            updated_image = draw_merged_box(
+                image_path, final_bbox, correct_severity, correct_damage
+            )
+            print(f"Output image saved as {updated_image}")
+            
+            # Update report and email
+            generate_report(correct_damage, correct_severity, image_path)
+            print("Updated report saved")
+            print("Updated email saved")
+            
+            print("Feedback applied!")
+            
+            # Update result object for final print
+            result.update({
+                "damage_type": correct_damage,
+                "severity": correct_severity,
+                "output_image": updated_image
+            })
+
+            print("\nPipeline completed successfully!")
+        else:
+             print("\nPipeline completed successfully!")
+    else:
+        # If not interactive, just print the JSON for Node.js
+        print(json.dumps(result))

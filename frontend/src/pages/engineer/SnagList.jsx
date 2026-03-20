@@ -6,7 +6,7 @@ import SnagEditModal from '../../components/SnagEditModal';
 import { Search, Filter, Send, Eye, Trash2, X, Camera, CheckCircle2, ClipboardList } from 'lucide-react';
 import toast from 'react-hot-toast';
 
-import { getBackendRoot } from '../../api/backendUtils';
+import { getBackendRoot, getImageUrl } from '../../api/backendUtils';
 
 const BACKEND = getBackendRoot();
 
@@ -21,6 +21,11 @@ export default function SnagList() {
     const [editModal, setEditModal] = useState(null); // snag to edit/verify
     const [sendContractor, setSendContractor] = useState('');
     const [sending, setSending] = useState(false);
+
+    // Human-in-the-loop state
+    const [sendStep, setSendStep] = useState(1); // 1: Contractor, 2: Preview/Edit
+    const [previewData, setPreviewData] = useState(null);
+    const [fetchingPreview, setFetchingPreview] = useState(false);
 
     useEffect(() => {
         fetchSnags();
@@ -43,15 +48,39 @@ export default function SnagList() {
         finally { setLoading(false); }
     };
 
-    const handleSendReport = async () => {
+    const handleOpenSend = async (snag) => {
+        setSendModal(snag);
+        setSendContractor(snag.assigned_to || '');
+        setSendStep(1);
+    };
+
+    const handleGoToPreview = async () => {
         if (!sendContractor) return toast.error('Please select a contractor');
+        setFetchingPreview(true);
+        try {
+            const res = await snagAPI.getPreviewReport(sendModal.snag_id);
+            setPreviewData(res.data.data);
+            setSendStep(2);
+        } catch {
+            toast.error('Failed to generate report preview');
+        } finally {
+            setFetchingPreview(false);
+        }
+    };
+
+    const handleSendReport = async () => {
         setSending(true);
         try {
-            await snagAPI.sendReport(sendModal.snag_id, { contractor_id: sendContractor });
+            await snagAPI.sendReport(sendModal.snag_id, { 
+                contractor_id: sendContractor,
+                customSubject: previewData.emailSubject,
+                customBody: previewData.emailBody,
+                reportData: previewData.reportData
+            });
             toast.success(`Report sent to contractor!`, {
                 icon: <Send size={18} color="var(--success)" />
             });
-            setSendModal(null); setSendContractor('');
+            setSendModal(null); setSendContractor(''); setPreviewData(null);
             fetchSnags();
         } catch (err) {
             toast.error(err.response?.data?.message || 'Failed to send report');
@@ -144,7 +173,7 @@ export default function SnagList() {
                                         <tr key={snag.snag_id}>
                                             <td>
                                                 {snag.images?.[0]?.image_url
-                                                    ? <img src={`${BACKEND}${snag.images[0].image_url}`} alt="" className="snag-thumb" />
+                                                    ? <img src={getImageUrl(snag.images[0].image_url)} alt="" className="snag-thumb" />
                                                     : <div className="snag-thumb-placeholder"><Camera size={18} /></div>
                                                 }
                                             </td>
@@ -187,7 +216,7 @@ export default function SnagList() {
                                                     </button>
                                                     {!snag.sent_to_contractor && (
                                                         <button className="btn btn-sm btn-primary" title="Send Report"
-                                                            onClick={() => { setSendModal(snag); setSendContractor(snag.assigned_to || ''); }}>
+                                                            onClick={() => handleOpenSend(snag)}>
                                                             <Send size={13} />
                                                         </button>
                                                     )}
@@ -214,35 +243,137 @@ export default function SnagList() {
                 onSuccess={fetchSnags} 
             />
 
-            {/* Send Report Modal */}
+            {/* Send Report Modal (Human-in-the-loop) */}
             {sendModal && (
-                <div className="modal-overlay" onClick={() => setSendModal(null)}>
-                    <div className="modal" onClick={(e) => e.stopPropagation()}>
+                <div className="modal-overlay">
+                    <div className="modal-content" style={{ maxWidth: sendStep === 1 ? 500 : 900, width: '95%', transition: 'all 0.4s cubic-bezier(0.4, 0, 0.2, 1)', padding: 0 }}>
                         <div className="modal-header">
-                            <h2 className="modal-title" style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                                <Send size={20} color="var(--orange)" /> Send Report to Contractor
+                            <h2 className="modal-title">
+                                {sendStep === 1 ? 'Step 1: Assign Contractor' : 'Step 2: Review & Send Report'}
                             </h2>
-                            <button className="btn btn-ghost btn-icon" onClick={() => setSendModal(null)}><X size={18} /></button>
+                            <button className="btn-close" onClick={() => setSendModal(null)}>×</button>
                         </div>
-                        <div style={{ marginBottom: 16, padding: 14, background: 'var(--bg-card)', borderRadius: 'var(--radius-md)', fontSize: 13 }}>
-                            <div><strong>Snag:</strong> {sendModal.snag_code}</div>
-                            <div><strong>Location:</strong> {sendModal.location_desc}</div>
-                            <div><strong>Current Detection:</strong> {sendModal.crack_type} / {sendModal.severity?.toUpperCase()}</div>
+
+                        <div className="modal-body" style={{ padding: 24 }}>
+                            {sendStep === 1 ? (
+                                <div className="animated-fade-in">
+                                    <p className="mb-20" style={{ color: 'var(--text-muted)' }}>
+                                        Choose a contractor to send the report for <strong>{sendModal.snag_code}</strong>.
+                                    </p>
+                                    <div className="form-group">
+                                        <label className="form-label">Select Contractor</label>
+                                        <select 
+                                            className="form-input"
+                                            value={sendContractor}
+                                            onChange={(e) => setSendContractor(e.target.value)}
+                                        >
+                                            <option value="">-- Choose Contractor --</option>
+                                            {contractors.map(c => (
+                                                <option key={c.user_id} value={c.user_id}>{c.name} ({c.email})</option>
+                                            ))}
+                                        </select>
+                                    </div>
+                                    <div className="flex justify-end mt-20">
+                                        <button 
+                                            className="btn btn-primary" 
+                                            onClick={handleGoToPreview}
+                                            disabled={!sendContractor || fetchingPreview}
+                                        >
+                                            {fetchingPreview ? <div className="spinner spinner-sm" /> : 'Continue to Preview →'}
+                                        </button>
+                                    </div>
+                                </div>
+                            ) : (
+                                <div className="animated-fade-in" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 24 }}>
+                                    {/* Column 1: Report Data Editor */}
+                                    <div>
+                                        <h4 style={{ marginBottom: 12, fontSize: 13, textTransform: 'uppercase', opacity: 0.7, color: 'var(--orange)' }}>Report Data</h4>
+                                        <div style={{ display: 'grid', gap: 12 }}>
+                                            <div className="form-group">
+                                                <label className="form-label" style={{ fontSize: 12 }}>Severity</label>
+                                                <select 
+                                                    className="form-input form-input-sm"
+                                                    value={previewData.reportData.severity}
+                                                    onChange={(e) => setPreviewData({
+                                                        ...previewData, 
+                                                        reportData: { ...previewData.reportData, severity: e.target.value }
+                                                    })}
+                                                >
+                                                    <option value="low">Low</option>
+                                                    <option value="medium">Medium</option>
+                                                    <option value="high">High</option>
+                                                </select>
+                                            </div>
+                                            <div className="form-group">
+                                                <label className="form-label" style={{ fontSize: 12 }}>Description</label>
+                                                <textarea 
+                                                    className="form-input"
+                                                    rows={3}
+                                                    value={previewData.reportData.description}
+                                                    onChange={(e) => setPreviewData({
+                                                        ...previewData, 
+                                                        reportData: { ...previewData.reportData, description: e.target.value }
+                                                    })}
+                                                />
+                                            </div>
+                                            <div className="form-group">
+                                                <label className="form-label" style={{ fontSize: 12 }}>Recommended Action</label>
+                                                <textarea 
+                                                    className="form-input"
+                                                    rows={3}
+                                                    value={previewData.reportData.recommended_action}
+                                                    onChange={(e) => setPreviewData({
+                                                        ...previewData, 
+                                                        reportData: { ...previewData.reportData, recommended_action: e.target.value }
+                                                    })}
+                                                />
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    {/* Column 2: Email Content Editor */}
+                                    <div>
+                                        <h4 style={{ marginBottom: 12, fontSize: 13, textTransform: 'uppercase', opacity: 0.7, color: 'var(--blue)' }}>Email Message</h4>
+                                        <div style={{ display: 'grid', gap: 12 }}>
+                                            <div className="form-group">
+                                                <label className="form-label" style={{ fontSize: 12 }}>Email Subject</label>
+                                                <input 
+                                                    className="form-input form-input-sm"
+                                                    value={previewData.emailSubject}
+                                                    onChange={(e) => setPreviewData({ ...previewData, emailSubject: e.target.value })}
+                                                />
+                                            </div>
+                                            <div className="form-group">
+                                                <label className="form-label" style={{ fontSize: 12 }}>Email Body</label>
+                                                <textarea 
+                                                    className="form-input"
+                                                    rows={8}
+                                                    style={{ fontFamily: 'monospace', fontSize: 12, background: 'var(--bg-body)' }}
+                                                    value={previewData.emailBody}
+                                                    onChange={(e) => setPreviewData({ ...previewData, emailBody: e.target.value })}
+                                                />
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
                         </div>
-                        <div className="form-group mb-20">
-                            <label className="form-label">Select Contractor *</label>
-                            <select className="form-select form-input" value={sendContractor}
-                                onChange={(e) => setSendContractor(e.target.value)}>
-                                <option value="">Choose contractor...</option>
-                                {contractors.map((c) => <option key={c.user_id} value={c.user_id}>{c.name} — {c.email}</option>)}
-                            </select>
-                        </div>
-                        <div className="flex gap-12">
-                            <button className="btn btn-secondary" style={{ flex: 1 }} onClick={() => setSendModal(null)}>Cancel</button>
-                            <button className="btn btn-primary" style={{ flex: 2 }} onClick={handleSendReport} disabled={sending}>
-                                {sending ? <span className="spinner" /> : <><Send size={15} /> Send Report + Email</>}
-                            </button>
-                        </div>
+
+                        {sendStep === 2 && (
+                            <div className="modal-footer flex justify-between items-center" style={{ borderTop: '1px solid var(--border-color)', padding: '16px 24px' }}>
+                                <button className="btn btn-ghost" onClick={() => setSendStep(1)}>← Back</button>
+                                <div className="flex gap-12">
+                                    <button className="btn btn-ghost" onClick={() => setSendModal(null)}>Cancel</button>
+                                    <button 
+                                        className="btn btn-primary" 
+                                        onClick={handleSendReport}
+                                        disabled={sending}
+                                    >
+                                        {sending ? <div className="spinner spinner-sm" /> : <><Send size={16} /> Finalize & Send Report</>}
+                                    </button>
+                                </div>
+                            </div>
+                        )}
                     </div>
                 </div>
             )}

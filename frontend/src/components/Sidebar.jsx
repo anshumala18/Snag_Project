@@ -4,7 +4,7 @@ import { useAuth } from '../context/AuthContext';
 import {
     LayoutDashboard, FolderOpen, PlusCircle, AlertOctagon,
     FileText, Wrench, SquareCheck, LogOut, Wifi, WifiOff,
-    HardHat, Building, Menu, X, UserCircle, TriangleAlert
+    HardHat, Building, Menu, X, UserCircle, TriangleAlert, Mail
 } from 'lucide-react';
 import { useOnlineStatus } from '../hooks/useSocket';
 import { getPendingCount, clearOfflineSnags } from '../utils/offlineStorage';
@@ -15,7 +15,9 @@ const EngineerNav = [
     { to: '/engineer/projects', icon: <FolderOpen size={17} />, label: 'Projects' },
     { to: '/engineer/snags', icon: <AlertOctagon size={17} />, label: 'Snag List' },
     { to: '/engineer/generate', icon: <PlusCircle size={17} />, label: 'Detect Snag' },
+    { to: '/engineer/offline', icon: <WifiOff size={17} />, label: 'Offline Sync' },
     { to: '/engineer/reports', icon: <FileText size={17} />, label: 'Reports' },
+    { to: '/engineer/mail', icon: <Mail size={17} />, label: 'Mail' },
 ];
 const ContractorNav = [
     { to: '/contractor/dashboard', icon: <LayoutDashboard size={17} />, label: 'Dashboard' },
@@ -200,14 +202,26 @@ export default function Sidebar() {
             <nav className="sidebar-nav">
                 {!isCollapsed && <div className="nav-section-label">Navigation</div>}
                 {navItems.map(item => (
-                    <NavLink
-                        key={item.to} to={item.to}
-                        onClick={closeMobile}
-                        className={({ isActive }) => `nav-item${isActive ? ' active' : ''}`}
+                    <NavLink 
+                        key={item.to} 
+                        to={item.to} 
+                        onClick={closeMobile} 
+                        className={({ isActive }) => `nav-item${isActive ? ' active' : ''}`} 
                         title={isCollapsed ? item.label : ''}
                     >
                         {item.icon}
-                        {!isCollapsed && item.label}
+                        {!isCollapsed && (
+                            <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                                <span>{item.label}</span>
+                                {item.label === 'Offline Sync' && pendingCount > 0 && (
+                                    <span style={{ 
+                                        background: 'var(--danger)', color: '#fff', fontSize: 10, fontWeight: 900, 
+                                        minWidth: 18, height: 18, borderRadius: 9, display: 'flex', 
+                                        alignItems: 'center', justifyContent: 'center', padding: '0 5px' 
+                                    }}>{pendingCount}</span>
+                                )}
+                            </div>
+                        )}
                     </NavLink>
                 ))}
             </nav>
