@@ -302,7 +302,7 @@ const updateProfile = async (req, res) => {
 const getContractors = async (req, res) => {
     try {
         const result = await pool.query(
-            `SELECT user_id, name, email, company, phone
+            `SELECT user_id, name, email, company, phone, specialization
        FROM users WHERE role = 'contractor' AND is_active = true ORDER BY name`
         );
         res.json({ success: true, data: result.rows });

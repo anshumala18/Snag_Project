@@ -90,7 +90,7 @@ export default function CompleteProfile() {
         if (publicEmailDomains.includes(domain)) e.companyEmail = 'Use official company email';
         if (!/\S+@\S+\.\S+/.test(form.companyEmail)) e.companyEmail = 'Invalid format';
 
-        if (!otpVerified) e.phone = 'Please verify your phone number';
+        if (!otpVerified) e.phone = 'Please verify your email';
         if (!form.consentTerms) e.consentTerms = 'You must agree to terms';
         return e;
     };
@@ -118,7 +118,7 @@ export default function CompleteProfile() {
         try {
             await authAPI.verifyOTP(form.phone, form.otp);
             setOtpVerified(true);
-            toast.success('Phone verified successfully!');
+            toast.success('Email verified successfully!');
         } catch (err) { 
             toast.error(err.response?.data?.message || 'Invalid OTP'); 
         } finally { setVerifyingOtp(false); }
@@ -265,7 +265,7 @@ export default function CompleteProfile() {
 
                             {otpVerified && (
                                 <div style={{ fontSize: 12, color: 'var(--success)', fontWeight: 600, display: 'flex', alignItems: 'center', gap: 6, marginBottom: 8 }}>
-                                    <CheckCircle size={14} /> Phone number verified
+                                    <CheckCircle size={14} /> Email verified
                                 </div>
                             )}
 

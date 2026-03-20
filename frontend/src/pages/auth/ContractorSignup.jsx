@@ -90,7 +90,7 @@ export default function ContractorSignup() {
         try {
             await authAPI.verifyOTP(form.phone, form.otp);
             setOtpVerified(true);
-            toast.success('Phone verified successfully!');
+            toast.success('Email verified successfully!');
         } catch (err) { 
             toast.error(err.response?.data?.message || 'Invalid OTP'); 
         } finally { setVerifyingOtp(false); }
@@ -278,7 +278,7 @@ export default function ContractorSignup() {
 
                             {otpVerified && (
                                 <div style={{ fontSize: 12, color: 'var(--success)', fontWeight: 600, display: 'flex', alignItems: 'center', gap: 6, marginBottom: 8 }}>
-                                    <CheckCircle size={14} /> Phone number verified
+                                    <CheckCircle size={14} /> Email verified
                                 </div>
                             )}
 

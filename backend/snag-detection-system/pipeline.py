@@ -41,6 +41,7 @@ def run_pipeline(image):
     analysis = analyze(predictions)
 
     predicted_severity = analysis["severity"]
+    predicted_crack_type = analysis.get("crack_type", "Hairline")
     avg_confidence = analysis["avg_confidence"]
     #avg_confidence = analysis.get("avg_confidence", 0.9)
 
@@ -77,15 +78,41 @@ def run_pipeline(image):
     report = generate_report(predicted_damage, predicted_severity, image)
 
     # ---------------------------
+    # AGENTIC DECISION (Contractor Matching)
+    # ---------------------------
+    # Mapping Roboflow classes & Refined Crack Types to Contractor Categories
+    SPEC_MAPPING = {
+        # Raw Roboflow Tags
+        "crack": "Structural",
+        "spalling": "Civil",
+        "efflorescence": "Civil",
+        "corrosion": "General",
+        "stains": "General",
+        "leak": "Plumbing",
+        "wire": "Electrical",
+        
+        # Refined Crack Types (from analysis_agent)
+        "Hairline": "Civil",
+        "Surface": "Civil",
+        "Structural": "Structural"
+    }
+    
+    # Try mapping by crack type first, then by raw damage label
+    recommended_spec = SPEC_MAPPING.get(predicted_crack_type, 
+                        SPEC_MAPPING.get(predicted_damage.lower(), "General"))
+
+    # ---------------------------
     # FINAL OUTPUT (IMPORTANT)
     # ---------------------------
     return {
         "damage_type": predicted_damage,
+        "crack_type": predicted_crack_type, # ✨ REFINED TYPE
         "severity": predicted_severity,
         "confidence": avg_confidence,
         "total_detections": len(predictions),
         "predictions": predictions,
-        "output_image": output_image   # ✅ ADDED
+        "output_image": output_image,
+        "recommended_specialization": recommended_spec
     }
 
 

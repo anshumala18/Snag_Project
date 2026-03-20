@@ -21,19 +21,21 @@ def analyze(predictions):
     avg_confidence = total_conf / count
 
     # ---------------------------
-    # SMART SEVERITY LOGIC 🔥
+    # SMART SEVERITY & CRACK TYPE LOGIC 🔥
     # ---------------------------
     if count >= 4 or avg_area > 50000:
-        severity = "Severe"
-
+        severity = "High"
+        crack_type = "Structural"
     elif count >= 2 or avg_area > 20000:
-        severity = "Moderate"
-
+        severity = "Medium"
+        crack_type = "Surface"
     else:
-        severity = "Minor"
+        severity = "Low"
+        crack_type = "Hairline"
 
     return {
         "damage_count": count,
         "severity": severity,
+        "crack_type": crack_type,
         "avg_confidence": round(avg_confidence, 2)
     }

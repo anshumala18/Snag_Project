@@ -1,18 +1,25 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
-import { snagAPI } from '../../api';
+import { snagAPI, authAPI } from '../../api';
 import Sidebar from '../../components/Sidebar';
 import { useSocket } from '../../hooks/useSocket';
 import {
     AlertOctagon, FolderOpen, PlusCircle, FileText,
-    CheckCircle, Clock, Activity, TrendingUp,
+    CheckCircle, Clock, Activity, TrendingUp, ShieldCheck, Zap, AlertTriangle, X
 } from 'lucide-react';
+import toast from 'react-hot-toast';
 
 export default function EngineerDashboard() {
-    const { user } = useAuth();
+    const { user, updateUser } = useAuth();
     const [stats, setStats] = useState(null);
     const [loading, setLoading] = useState(true);
+    
+    // OTP / Verification States
+    const [showVerifyModal, setShowVerifyModal] = useState(false);
+    const [otp, setOtp] = useState('');
+    const [verifying, setVerifying] = useState(false);
+
     useSocket();
 
     const fetchStats = () => {
@@ -25,11 +32,39 @@ export default function EngineerDashboard() {
 
     useEffect(() => {
         fetchStats();
-
-        // Listen for sync events
         window.addEventListener('snag_synced', fetchStats);
         return () => window.removeEventListener('snag_synced', fetchStats);
     }, []);
+
+    const handleSendOTP = async () => {
+        setVerifying(true);
+        try {
+            await authAPI.sendOTP(user.phone, user.email || user.personal_email);
+            toast.success('Verification OTP sent to your email.');
+            setShowVerifyModal(true);
+        } catch (err) {
+            toast.error('Failed to send OTP. Please update your profile with a valid phone/email.');
+        } finally {
+            setVerifying(false);
+        }
+    };
+
+    const handleVerifyOTP = async () => {
+        if (!otp || otp.length < 6) return toast.error('Enter 6-digit OTP');
+        setVerifying(true);
+        try {
+            await authAPI.verifyOTP(user.phone, otp);
+            // Update user in context/localStorage
+            const updatedUser = { ...user, phone_verified: true };
+            updateUser(updatedUser);
+            toast.success('Account successfully verified!', { icon: '🛡️' });
+            setShowVerifyModal(false);
+        } catch (err) {
+            toast.error('Invalid OTP. Please try again.');
+        } finally {
+            setVerifying(false);
+        }
+    };
 
     const greeting = (() => {
         const h = new Date().getHours();
@@ -43,16 +78,103 @@ export default function EngineerDashboard() {
                 <div className="page-header">
                     <div className="flex items-center justify-between gap-16">
                         <div>
-                            <h1 className="page-title">{greeting}, {user?.name?.split(' ')[0]}</h1>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                                <h1 className="page-title">{greeting}, {user?.name?.split(' ')[0]}</h1>
+                                {user?.phone_verified ? (
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: 4, background: '#ecfdf5', padding: '4px 10px', borderRadius: 20, border: '1px solid #a7f3d0' }}>
+                                        <ShieldCheck size={14} color="#10b981" />
+                                        <span style={{ fontSize: 11, fontWeight: 700, color: '#047857' }}>Verified Engineer</span>
+                                    </div>
+                                ) : (
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: 4, background: '#fff7ed', padding: '4px 10px', borderRadius: 20, border: '1px solid #ffedd5' }}>
+                                        <AlertTriangle size={14} color="#f97316" />
+                                        <span style={{ fontSize: 11, fontWeight: 700, color: '#9a3412' }}>Unverified</span>
+                                    </div>
+                                )}
+                            </div>
                             <p className="page-subtitle">Here is your inspection overview for today</p>
                         </div>
-                        <Link to="/engineer/generate" className="btn btn-primary">
-                            <PlusCircle size={16} /> Detect Snag
-                        </Link>
+                        <div className="flex gap-12">
+                            <Link to="/engineer/generate" className="btn btn-primary">
+                                <PlusCircle size={16} /> Detect Snag
+                            </Link>
+                        </div>
                     </div>
                 </div>
 
                 <div className="page-body">
+                    {/* --- OTP Verification Banner --- */}
+                    {!user?.phone_verified && (
+                        <div style={{ 
+                            background: 'linear-gradient(90deg, #1e293b, #334155)', 
+                            borderRadius: 12, 
+                            padding: '16px 20px', 
+                            marginBottom: 24, 
+                            display: 'flex', 
+                            alignItems: 'center', 
+                            justifyContent: 'space-between',
+                            boxShadow: '0 10px 15px -3px rgba(0,0,0,0.1)',
+                            border: '1px solid rgba(255,255,255,0.05)'
+                        }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+                                <div style={{ width: 44, height: 44, borderRadius: 12, background: 'rgba(234,88,12,0.15)', display: 'flex', alignItems: 'center', justifyCenter: 'center', border: '1px solid rgba(234,88,12,0.2)' }}>
+                                    <ShieldCheck size={24} color="var(--orange)" style={{ margin: 'auto' }} />
+                                </div>
+                                <div>
+                                    <div style={{ color: '#fff', fontSize: 15, fontWeight: 700 }}>Secure your account with OTP</div>
+                                    <div style={{ color: 'rgba(255,255,255,0.6)', fontSize: 12, marginTop: 2 }}>Verify your email to enable instant contractor reporting.</div>
+                                </div>
+                            </div>
+                            <button 
+                                onClick={handleSendOTP} 
+                                disabled={verifying}
+                                className="btn" 
+                                style={{ background: 'var(--orange)', color: '#fff', border: 'none', px: 20, fontWeight: 700 }}
+                            >
+                                {verifying ? 'Sending...' : 'Verify Now'}
+                            </button>
+                        </div>
+                    )}
+
+                    {/* --- OTP Verification Modal --- */}
+                    {showVerifyModal && (
+                        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: 20 }}>
+                            <div style={{ background: '#fff', width: '100%', maxWidth: 400, borderRadius: 16, padding: 32, boxShadow: '0 25px 50px -12px rgba(0,0,0,0.25)', position: 'relative' }}>
+                                <button onClick={() => setShowVerifyModal(false)} style={{ position: 'absolute', right: 20, top: 20, background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)' }}><X size={20} /></button>
+                                
+                                <div style={{ textAlign: 'center', marginBottom: 24 }}>
+                                    <div style={{ width: 64, height: 64, background: '#ecfdf5', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px' }}>
+                                        <ShieldCheck size={32} color="#10b981" />
+                                    </div>
+                                    <h3 style={{ fontSize: 20, fontWeight: 800, color: 'var(--text-primary)' }}>Enter Verification Code</h3>
+                                    <p style={{ fontSize: 13, color: 'var(--text-muted)', marginTop: 8 }}>We've sent a 6-digit OTP to your registered email.</p>
+                                </div>
+
+                                <div className="form-group" style={{ marginBottom: 24 }}>
+                                    <input 
+                                        type="text" 
+                                        maxLength="6"
+                                        className="form-input" 
+                                        placeholder="0 0 0 0 0 0" 
+                                        value={otp} 
+                                        onChange={(e) => setOtp(e.target.value.replace(/\D/g, ''))}
+                                        style={{ letterSpacing: '8px', fontSize: '24px', fontWeight: 800, textAlign: 'center', padding: '16px 0', border: '2px solid var(--orange)' }} 
+                                    />
+                                    <p style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 12, textAlign: 'center' }}>
+                                        Didn't receive the code? <button onClick={handleSendOTP} style={{ color: 'var(--orange)', fontWeight: 700, background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}>Resend Now</button>
+                                    </p>
+                                </div>
+
+                                <button 
+                                    onClick={handleVerifyOTP} 
+                                    disabled={verifying}
+                                    className="btn btn-primary btn-full btn-lg"
+                                >
+                                    {verifying ? 'Verifying...' : 'Verify & Secure Account'}
+                                </button>
+                            </div>
+                        </div>
+                    )}
                     {/* Hazard bar accent */}
                     <div className="hazard-bar mb-24" style={{ height: 4, borderRadius: 2 }} />
 
