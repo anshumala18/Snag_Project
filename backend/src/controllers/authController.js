@@ -131,10 +131,11 @@ const sendOTP = async (req, res) => {
             console.error(`[OTP FAIL] Email to ${email} failed:`, emailResult.error);
             
             // Return 200 with success:false to avoid Red Console error and allow Toast to show clearly
-            return res.json({
-                success: false,
-                message: `Email sending failed: ${emailResult.error || 'Connection error'}.`,
-                devHint: "Check your Render Environment Variables. You can use 123456 to bypass while debugging."
+            return res.status(400).json({ 
+                success: false, 
+                message: "OTP generated but email delivery failed. Please check your internet or try again later.",
+                dev_note: "Check SMTP configuration or Gmail App Password.",
+                error: emailResult.error
             });
         }
     } catch (error) {

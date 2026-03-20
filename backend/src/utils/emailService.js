@@ -4,22 +4,22 @@ const path = require('path');
 // ─── Create transporter (nodemailer v8 compatible) ────────────────────────────
 const createTransporter = () => {
   return nodemailer.createTransport({
-    service: 'gmail',
+    host: 'smtp.gmail.com',
+    port: 465,
+    secure: true, // Use SSL
+    pool: true,   // Use connection pooling for speed
     auth: {
       user: process.env.EMAIL_USER,
       pass: process.env.EMAIL_PASSWORD,
     },
-    // FORCE IPv4 and increase timeouts for Render network stability
-    connectionTimeout: 45000, 
-    greetingTimeout: 45000,
-    socketTimeout: 45000,
-    dnsTimeout: 45000,
-    family: 4, 
     tls: {
       rejectUnauthorized: false
     },
-    debug: true,
-    logger: true 
+    connectionTimeout: 25000,
+    greetingTimeout: 25000,
+    socketTimeout: 25000,
+    dnsTimeout: 10000,
+    family: 4 // Force IPv4
   });
 };
 
