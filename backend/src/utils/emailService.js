@@ -11,9 +11,13 @@ const createTransporter = () => {
       user: process.env.EMAIL_USER,
       pass: process.env.EMAIL_PASSWORD,
     },
-    connectionTimeout: 30000, 
-    greetingTimeout: 30000,
-    socketTimeout: 30000,
+    // FORCE IPv4 to avoid ENETUNREACH on environments without IPv6 support
+    connectionTimeout: 40000, 
+    greetingTimeout: 40000,
+    socketTimeout: 40000,
+    dnsTimeout: 40000,
+    // This is the key fix for Render IPv6 issues
+    family: 4, 
     debug: true,
     logger: true 
   });
