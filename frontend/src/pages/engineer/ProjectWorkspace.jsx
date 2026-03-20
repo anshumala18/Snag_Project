@@ -152,7 +152,7 @@ export default function ProjectWorkspace() {
 
                     {/* Tabs / Content */}
                     <div className="card" style={{ padding: 0 }}>
-                        <div style={{ display: 'flex', gap: 24, borderBottom: '1px solid var(--border)', padding: '0 24px' }}>
+                    <div className="tabs-scroll" style={{ display: 'flex', gap: 24, borderBottom: '1px solid var(--border)', padding: '0 24px' }}>
                             {['overview', 'snags', 'reports'].map(t => (
                                 <div key={t} 
                                     onClick={() => setActiveTab(t)}

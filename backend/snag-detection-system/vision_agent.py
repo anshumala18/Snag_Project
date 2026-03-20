@@ -16,7 +16,9 @@ def detect_snag(image_path):
         with open(image_path, "rb") as f:
             response = requests.post(url, params=params, files={"file": f})
 
-        return response.json()
+        result = response.json()
+        # print("ROBOFLOW RAW:", result) # For debugging
+        return result
 
     except Exception as e:
         print("Error in detection:", e)

@@ -224,7 +224,7 @@ export default function GenerateSnag() {
                             <div className="card mt-24">
                                 <h3 style={{ fontSize: 16, fontWeight: 700, marginBottom: 20 }}>📷 Add Crack Photo</h3>
 
-                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 20 }}>
+                                <div className="grid-2" style={{ gap: 12, marginBottom: 20 }}>
                                     <button className="btn btn-secondary btn-lg"
                                         onClick={() => camRef.current?.click()} style={{ gap: 10 }}>
                                         <Camera size={20} /> Capture Image
@@ -283,7 +283,7 @@ export default function GenerateSnag() {
                         {step === 3 && (
                             <div className="mt-24">
                                 {/* Image + AI result side by side */}
-                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 20 }}>
+                                <div className="grid-2" style={{ gap: 16, marginBottom: 20 }}>
                                     <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
                                         <img
                                             src={

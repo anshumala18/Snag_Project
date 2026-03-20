@@ -141,11 +141,15 @@ const verifyOTP = async (req, res) => {
 const login = async (req, res) => {
     try {
         const { email, password } = req.body;
+        console.log(`[LOGIN] Attempt for: ${email} (pass_len: ${password?.length})`);
 
-        // Find user
+        // Trim email to avoid hidden space issues
+        const cleanEmail = email?.trim();
+        
+        // Find user (Case-insensitive check)
         const result = await pool.query(
-            'SELECT * FROM users WHERE email = $1 AND is_active = true',
-            [email]
+            'SELECT * FROM users WHERE LOWER(email) = LOWER($1) AND is_active = true',
+            [cleanEmail]
         );
 
         if (result.rows.length === 0) {

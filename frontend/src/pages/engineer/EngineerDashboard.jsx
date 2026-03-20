@@ -41,7 +41,7 @@ export default function EngineerDashboard() {
             <Sidebar />
             <main className="main-content">
                 <div className="page-header">
-                    <div className="flex items-center justify-between">
+                    <div className="flex items-center justify-between gap-16">
                         <div>
                             <h1 className="page-title">{greeting}, {user?.name?.split(' ')[0]}</h1>
                             <p className="page-subtitle">Here is your inspection overview for today</p>

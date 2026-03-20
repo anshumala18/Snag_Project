@@ -29,6 +29,7 @@ export default function Sidebar() {
     const online = useOnlineStatus();
     const navigate = useNavigate();
     const [mobileOpen, setMobileOpen] = useState(false);
+    const [isCollapsed, setIsCollapsed] = useState(false);
     const [pendingCount, setPendingCount] = useState(0);
     const [isSyncing, setIsSyncing] = useState(false);
 
@@ -80,19 +81,32 @@ export default function Sidebar() {
                 <X size={16} />
             </button>
 
-            {/* Logo */}
+            {/* Logo area with integrated Menu Toggle */}
             <div className="sidebar-logo">
-                <div className="sidebar-logo-icon">
-                    <Building size={20} color="#fff" />
-                </div>
-                <div>
-                    <div className="sidebar-logo-text">SnagDetect</div>
-                    <div className="sidebar-logo-sub">Construction AI Platform</div>
-                </div>
+                {!isCollapsed && (
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 12, flex: 1 }}>
+                        <div className="sidebar-logo-icon">
+                            <Building size={20} color="#fff" />
+                        </div>
+                        <div>
+                            <div className="sidebar-logo-text">SnagDetect</div>
+                            <div className="sidebar-logo-sub">Construction AI Platform</div>
+                        </div>
+                    </div>
+                )}
+                
+                {/* Desktop Menu Toggle (3-lines) */}
+                <button 
+                    className="desktop-menu-toggle" 
+                    onClick={() => setIsCollapsed(!isCollapsed)}
+                    title={isCollapsed ? "Expand Sidebar" : "Collapse Sidebar"}
+                >
+                    <Menu size={18} />
+                </button>
             </div>
 
             {/* ─── Sync Status Card ─── */}
-            {pendingCount > 0 && (
+            {pendingCount > 0 && !isCollapsed && (
                 <div style={{ padding: '0 16px', marginBottom: 12 }}>
                     <div style={{
                         background: online ? 'rgba(16,185,129,0.1)' : 'rgba(245,158,11,0.1)',
@@ -135,7 +149,7 @@ export default function Sidebar() {
             )}
 
             {/* ─── Profile Incomplete Warning ─── */}
-            {!isEngineer && user && !user.profile_completed && (
+            {!isEngineer && user && !user.profile_completed && !isCollapsed && (
                 <div style={{ padding: '0 16px', marginBottom: 12 }}>
                     <div style={{
                         background: 'rgba(239,68,68,0.1)',
@@ -164,33 +178,36 @@ export default function Sidebar() {
             )}
 
             {/* Role badge */}
-            <div style={{ padding: '8px 16px' }}>
-                <div style={{
-                    display: 'flex', alignItems: 'center', gap: 8,
-                    background: 'rgba(234,88,12,0.12)', border: '1px solid rgba(234,88,12,0.2)',
-                    borderRadius: 'var(--r-md)', padding: '7px 10px',
-                }}>
-                    {isEngineer
-                        ? <HardHat size={14} color="var(--orange-light)" />
-                        : <Wrench size={14} color="var(--orange-light)" />
-                    }
-                    <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--orange-light)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-                        {roleLabel}
-                    </span>
+            {!isCollapsed && (
+                <div style={{ padding: '8px 16px' }}>
+                    <div style={{
+                        display: 'flex', alignItems: 'center', gap: 8,
+                        background: 'rgba(234,88,12,0.12)', border: '1px solid rgba(234,88,12,0.2)',
+                        borderRadius: 'var(--r-md)', padding: '7px 10px',
+                    }}>
+                        {isEngineer
+                            ? <HardHat size={14} color="var(--orange-light)" />
+                            : <Wrench size={14} color="var(--orange-light)" />
+                        }
+                        <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--orange-light)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                            {roleLabel}
+                        </span>
+                    </div>
                 </div>
-            </div>
+            )}
 
             {/* Navigation */}
             <nav className="sidebar-nav">
-                <div className="nav-section-label">Navigation</div>
+                {!isCollapsed && <div className="nav-section-label">Navigation</div>}
                 {navItems.map(item => (
                     <NavLink
                         key={item.to} to={item.to}
                         onClick={closeMobile}
                         className={({ isActive }) => `nav-item${isActive ? ' active' : ''}`}
+                        title={isCollapsed ? item.label : ''}
                     >
                         {item.icon}
-                        {item.label}
+                        {!isCollapsed && item.label}
                     </NavLink>
                 ))}
             </nav>
@@ -206,18 +223,20 @@ export default function Sidebar() {
                 </div>
 
                 {/* User info */}
-                <div className="user-card">
+                <div className="user-card" style={{ padding: isCollapsed ? '10px 6px' : '10px' }}>
                     <div className="avatar">{initials}</div>
-                    <div style={{ minWidth: 0, flex: 1 }}>
-                        <div className="user-name" style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{user?.name}</div>
-                        <div className="user-role">{roleLabel}</div>
-                    </div>
+                    {!isCollapsed && (
+                        <div style={{ minWidth: 0, flex: 1 }}>
+                            <div className="user-name" style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{user?.name}</div>
+                            <div className="user-role">{roleLabel}</div>
+                        </div>
+                    )}
                 </div>
 
                 {/* Logout */}
                 <button className="btn btn-ghost btn-sm w-full"
-                    onClick={handleLogout}>
-                    <LogOut size={14} /> Sign Out
+                    onClick={handleLogout} style={{ justifyContent: isCollapsed ? 'center' : 'flex-start' }}>
+                    <LogOut size={14} /> {!isCollapsed && "Sign Out"}
                 </button>
             </div>
         </>
@@ -242,7 +261,7 @@ export default function Sidebar() {
             <div className={`sidebar-overlay${mobileOpen ? ' active' : ''}`} onClick={closeMobile} />
 
             {/* ── Sidebar ───────────────────────────────────── */}
-            <aside className={`sidebar${mobileOpen ? ' open' : ''}`} style={{ position: 'fixed' }}>
+            <aside className={`sidebar ${mobileOpen ? 'open' : ''} ${isCollapsed ? 'collapsed' : ''}`}>
                 <SidebarContent />
             </aside>
         </>

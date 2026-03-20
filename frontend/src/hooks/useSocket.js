@@ -12,7 +12,8 @@ export const useSocket = () => {
     useEffect(() => {
         if (!user) return;
 
-        socket = io('http://localhost:5000', { withCredentials: true });
+        const socketURL = import.meta.env.VITE_SOCKET_URL || 'http://localhost:5000';
+        socket = io(socketURL, { withCredentials: true });
 
         socket.on('connect', () => {
             setConnected(true);

@@ -35,7 +35,7 @@ export default function ContractorDashboard() {
             <main className="main-content">
                 <div className="page-header">
                     <div>
-                        <h1 className="page-title" style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                        <h1 className="page-title">
                             Contractor Dashboard <Wrench size={24} color="var(--orange)" />
                         </h1>
                         <p className="page-subtitle">Welcome, {user?.name} — manage your assigned repair tasks.</p>

@@ -230,7 +230,7 @@ export default function CompleteProfile() {
                                         <Phone size={15} className="input-icon" />
                                         <input id="con-phone" type="tel" name="phone" className="form-input"
                                             placeholder="Phone number" value={form.phone} onChange={handleChange}
-                                            style={{ paddingLeft: 40 }} readOnly />
+                                            style={{ paddingLeft: 40 }} readOnly={otpVerified} />
                                     </div>
                                     {!otpVerified && (
                                         <button type="button" className="btn btn-secondary btn-sm" 
