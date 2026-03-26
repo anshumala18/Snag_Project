@@ -7,7 +7,7 @@ import Sidebar from '../../components/Sidebar';
 import { 
     Camera, Upload, X, AlertTriangle, MapPin, 
     Calendar, WifiOff, Cpu, Image, ClipboardList, CheckCircle, 
-    AlertOctagon, Send, Smartphone, Zap, ArrowLeft, Mail, FileText
+    AlertOctagon, Send, Smartphone, Zap, ArrowLeft, Mail, FileText, Loader2
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { getAIImageUrl, getImageUrl, getBackendRoot } from '../../api/backendUtils';
@@ -318,17 +318,17 @@ export default function GenerateSnag() {
                                 </div>
                                 
                                 {analyzing && (
-                                     <div style={{ marginTop: 32 }}>
+                                     <div style={{ marginTop: 32, display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
                                          <div className="flex flex-center gap-12" style={{ marginBottom: 12 }}>
-                                             <Cpu size={24} color="var(--orange)" className="animate-spin-slow" />
-                                             <h3 style={{ fontSize: 20, fontWeight: 800, margin: 0, color: 'var(--text-primary)' }}>Neural Intelligence Engine</h3>
+                                             <Loader2 size={28} color="var(--orange)" className="animate-spin" />
+                                             <h3 style={{ fontSize: 22, fontWeight: 900, margin: 0, color: 'var(--text-primary)' }}>Yolov8 is processing...</h3>
                                          </div>
-                                         <p style={{ color: 'var(--text-muted)', fontSize: 14 }}>Mapping structure and identifying anomalies...</p>
-                                         <div style={{ width: 240, height: 6, background: '#f1f5f9', borderRadius: 3, margin: '20px auto', overflow: 'hidden' }}>
+                                         <p style={{ color: 'var(--text-muted)', fontSize: 14 }}>Scanning structural health and detecting anomalies...</p>
+                                         <div style={{ width: 260, height: 8, background: '#f1f5f9', borderRadius: 4, margin: '20px auto', overflow: 'hidden' }}>
                                              <div className="progress-shimmer" style={{ height: '100%', width: '100%' }} />
                                          </div>
                                      </div>
-                                 )}
+                                )}
                             </div>
                         )}
 
@@ -421,106 +421,127 @@ export default function GenerateSnag() {
                                             </div>
                                         </div>
 
-                                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 2fr', gap: 32 }}>
-                                            {/* LEFT: Type & Severity */}
-                                            <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
-                                                <div className="form-group">
-                                                    <label className="form-label" style={{ fontWeight: 700, color: 'var(--text-muted)', marginBottom: 12 }}>Crack Classification</label>
-                                                    <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-                                                        {CRACK_TYPES.map((ct) => (
-                                                            <label key={ct.value} style={{ cursor: 'pointer' }}>
-                                                                <input type="radio" name="crack_type" value={ct.value} checked={form.crack_type === ct.value} onChange={(e) => setForm({ ...form, crack_type: e.target.value })} style={{ display: 'none' }} />
-                                                                <div style={{ 
-                                                                    display: 'flex', alignItems: 'center', gap: 12, padding: '12px 16px', borderRadius: 12,
-                                                                    border: `2px solid ${form.crack_type === ct.value ? 'var(--orange)' : '#f1f5f9'}`,
-                                                                    background: form.crack_type === ct.value ? 'rgba(234,88,12,0.05)' : '#f8fafc',
-                                                                    transition: 'all 0.2s'
-                                                                }}>
-                                                                    <div style={{ fontSize: 16 }}>{ct.icon}</div>
-                                                                    <div style={{ flex: 1 }}>
-                                                                        <div style={{ fontSize: 13, fontWeight: 700 }}>{ct.label}</div>
-                                                                        <div style={{ fontSize: 10, color: 'var(--text-muted)' }}>{ct.desc}</div>
-                                                                    </div>
-                                                                    {form.crack_type === ct.value && <CheckCircle size={16} color="var(--orange)" />}
-                                                                </div>
-                                                            </label>
-                                                        ))}
-                                                    </div>
-                                                </div>
-
-                                                <div className="form-group">
-                                                    <label className="form-label" style={{ fontWeight: 700, color: 'var(--text-muted)', marginBottom: 12 }}>Severity Assessment</label>
-                                                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8 }}>
-                                                        {SEVERITIES.map((s) => (
-                                                            <label key={s.value} style={{ cursor: 'pointer' }}>
-                                                                <input type="radio" name="severity" value={s.value} checked={form.severity === s.value} onChange={(e) => setForm({ ...form, severity: e.target.value })} style={{ display: 'none' }} />
-                                                                <div style={{ 
-                                                                    padding: '12px 8px', borderRadius: 10, textAlign: 'center', fontSize: 12, fontWeight: 800,
-                                                                    border: `2px solid ${form.severity === s.value ? s.color : '#f1f5f9'}`,
-                                                                    background: form.severity === s.value ? `${s.color}15` : '#f8fafc',
-                                                                    color: form.severity === s.value ? s.color : '#94a3b8',
-                                                                    transition: 'all 0.2s'
-                                                                }}>
-                                                                    {s.label}
-                                                                </div>
-                                                            </label>
-                                                        ))}
-                                                    </div>
-                                                </div>
+                                        <div className="form-group" style={{ marginBottom: 8 }}>
+                                            <label className="form-label" style={{ fontWeight: 800, color: 'var(--text-muted)', marginBottom: 12, textTransform: 'uppercase', fontSize: 11, letterSpacing: '0.05em' }}>Crack Classification</label>
+                                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 12 }}>
+                                                {CRACK_TYPES.map((ct) => (
+                                                    <label key={ct.value} style={{ cursor: 'pointer' }}>
+                                                        <input type="radio" name="crack_type" value={ct.value} checked={form.crack_type === ct.value} onChange={(e) => setForm({ ...form, crack_type: e.target.value })} style={{ display: 'none' }} />
+                                                        <div style={{ 
+                                                            display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', gap: 6, padding: '16px 12px', borderRadius: 16,
+                                                            border: `2px solid ${form.crack_type === ct.value ? 'var(--orange)' : '#f1f5f9'}`,
+                                                            background: form.crack_type === ct.value ? 'rgba(234,88,12,0.05)' : '#f8fafc',
+                                                            transition: 'all 0.2s', height: '100%'
+                                                        }}>
+                                                            <div style={{ fontSize: 24, marginBottom: 4 }}>{ct.icon}</div>
+                                                            <div>
+                                                                <div style={{ fontSize: 13, fontWeight: 800, marginBottom: 2 }}>{ct.label}</div>
+                                                                <div style={{ fontSize: 10, color: 'var(--text-muted)', lineHeight: 1.2 }}>{ct.desc}</div>
+                                                            </div>
+                                                            {form.crack_type === ct.value && <CheckCircle size={14} color="var(--orange)" style={{ marginTop: 'auto' }} />}
+                                                        </div>
+                                                    </label>
+                                                ))}
                                             </div>
+                                        </div>
 
-                                            {/* RIGHT: Rest of the fields */}
-                                            <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
-                                                <div className="form-group">
-                                                    <label className="form-label" style={{ fontWeight: 700, color: 'var(--text-muted)' }}>Work Assignment</label>
-                                                    <div style={{ position: 'relative' }}>
-                                                        <Smartphone size={16} style={{ position: 'absolute', left: 14, top: 16, color: 'var(--text-muted)' }} />
-                                                        <select className="form-select form-input" value={form.contractor_id} onChange={(e) => setForm({ ...form, contractor_id: e.target.value })} style={{ paddingLeft: 40, height: 48, borderRadius: 12 }}>
-                                                            <option value="">Choose expert for this task...</option>
-                                                            {contractors.map((c) => {
-                                                                const isRecommended = aiResult?.recommended_specialization && 
-                                                                    aiResult.recommended_specialization.toLowerCase().split(' / ').some(term => 
-                                                                        c.specialization?.toLowerCase().includes(term.trim())
-                                                                    );
-                                                                return (
-                                                                    <option key={c.user_id} value={c.user_id}>
-                                                                        {c.name} ({c.specialization}) {isRecommended ? ' — ✨ RECOMMEND' : ''}
-                                                                    </option>
+                                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px 24px' }}>
+                                            {/* Row 1, Left: Work Assignment */}
+                                            <div className="form-group">
+                                                <label className="form-label" style={{ fontWeight: 700, color: 'var(--text-muted)' }}>Work Assignment</label>
+                                                <div style={{ position: 'relative' }}>
+                                                    <Smartphone size={16} style={{ position: 'absolute', left: 14, top: 16, color: 'var(--text-muted)' }} />
+                                                    <select className="form-select form-input" value={form.contractor_id} onChange={(e) => setForm({ ...form, contractor_id: e.target.value })} style={{ paddingLeft: 40, height: 48, borderRadius: 12 }}>
+                                                        <option value="">Choose expert for this task...</option>
+                                                        {contractors.map((c) => {
+                                                            const isRecommended = aiResult?.recommended_specialization && 
+                                                                aiResult.recommended_specialization.toLowerCase().split(' / ').some(term => 
+                                                                    c.specialization?.toLowerCase().includes(term.trim())
                                                                 );
-                                                            })}
-                                                        </select>
-                                                    </div>
-                                                </div>
-
-                                                <div className="grid-2" style={{ gap: 20 }}>
-                                                    <div className="form-group">
-                                                        <label className="form-label" style={{ fontWeight: 700, color: 'var(--text-muted)' }}>Target Resolution</label>
-                                                        <div style={{ position: 'relative' }}>
-                                                            <Calendar size={16} style={{ position: 'absolute', left: 14, top: 16, color: 'var(--text-muted)' }} />
-                                                            <input type="date" className="form-input" value={form.target_date} onChange={(e) => setForm({ ...form, target_date: e.target.value })} style={{ paddingLeft: 40, height: 48, borderRadius: 12 }} min={new Date().toISOString().split('T')[0]} />
-                                                        </div>
-                                                    </div>
-                                                    <div className="form-group">
-                                                        <label className="form-label" style={{ fontWeight: 700, color: 'var(--text-muted)' }}>Geodata</label>
-                                                        <div style={{ display: 'flex', height: 48, background: '#f8fafc', borderRadius: 12, border: '1px solid #e2e8f0', alignItems: 'center', px: 12, gap: 10 }}>
-                                                            {(!form.latitude || !form.longitude) ? (
-                                                                <button type="button" onClick={captureLocation} style={{ background: 'none', border: 'none', color: '#64748b', fontSize: 12, fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6 }}>
-                                                                    <MapPin size={14} /> Fetch Coordinates
-                                                                </button>
-                                                            ) : (
-                                                                <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 11, color: 'var(--success)', fontWeight: 700 }}>
-                                                                    <CheckCircle size={14} /> Ready
-                                                                </div>
-                                                            )}
-                                                        </div>
-                                                    </div>
-                                                </div>
-
-                                                <div className="form-group">
-                                                    <label className="form-label" style={{ fontWeight: 700, color: 'var(--text-muted)' }}>Project Notes</label>
-                                                    <textarea className="form-textarea" rows={4} placeholder="Describe the findings and immediate requirements..." value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} style={{ borderRadius: 12, padding: 16, fontSize: 13 }} />
+                                                            return (
+                                                                <option key={c.user_id} value={c.user_id}>
+                                                                    {c.name} ({c.specialization}) {isRecommended ? ' — ✨ RECOMMEND' : ''}
+                                                                </option>
+                                                            );
+                                                        })}
+                                                    </select>
                                                 </div>
                                             </div>
+
+                                            {/* Row 1, Right: Coordinates */}
+                                            <div className="form-group">
+                                                <label className="form-label" style={{ fontWeight: 700, color: 'var(--text-muted)' }}>GPS Coordinates</label>
+                                                <div className="grid-2" style={{ gap: 12 }}>
+                                                    <div>
+                                                        <input 
+                                                            type="number" step="any" className="form-input" placeholder="Latitude" 
+                                                            value={form.latitude || ''} 
+                                                            onChange={(e) => setForm({ ...form, latitude: e.target.value })} 
+                                                            style={{ height: 48, borderRadius: 12, fontSize: 13 }} 
+                                                        />
+                                                    </div>
+                                                    <div>
+                                                        <input 
+                                                            type="number" step="any" className="form-input" placeholder="Longitude" 
+                                                            value={form.longitude || ''} 
+                                                            onChange={(e) => setForm({ ...form, longitude: e.target.value })} 
+                                                            style={{ height: 48, borderRadius: 12, fontSize: 13 }} 
+                                                        />
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                            {/* Row 2, Left: Target Resolution */}
+                                            <div className="form-group" style={{ marginBottom: 0 }}>
+                                                <label className="form-label" style={{ fontWeight: 700, color: 'var(--text-muted)' }}>Target Resolution</label>
+                                                <div style={{ position: 'relative' }}>
+                                                    <Calendar size={16} style={{ position: 'absolute', left: 14, top: 16, color: 'var(--text-muted)' }} />
+                                                    <input type="date" className="form-input" value={form.target_date} onChange={(e) => setForm({ ...form, target_date: e.target.value })} style={{ paddingLeft: 40, height: 48, borderRadius: 12 }} min={new Date().toISOString().split('T')[0]} />
+                                                </div>
+                                            </div>
+
+                                            {/* Row 2, Right: Update Button (Aligned with Resolution) */}
+                                            <div className="form-group" style={{ marginBottom: 0 }}>
+                                                <label className="form-label" style={{ fontWeight: 700, color: 'var(--text-muted)' }}>Location Sync</label>
+                                                <button 
+                                                    type="button" onClick={captureLocation} 
+                                                    className="form-input"
+                                                    style={{ 
+                                                        width: '100%', height: 48, borderRadius: 12, border: '1.5px solid var(--border)', 
+                                                        background: 'var(--bg-root)', color: 'var(--text-primary)', fontSize: 13, fontWeight: 700, 
+                                                        cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10,
+                                                        padding: 0
+                                                    }}
+                                                >
+                                                    <MapPin size={18} color="var(--orange)" /> Update Coordinates
+                                                </button>
+                                            </div>
+                                        </div>
+
+                                        <div className="form-group">
+                                            <label className="form-label" style={{ fontWeight: 800, color: 'var(--text-muted)', marginBottom: 12, textTransform: 'uppercase', fontSize: 11, letterSpacing: '0.05em' }}>Severity Assessment</label>
+                                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 12 }}>
+                                                {SEVERITIES.map((s) => (
+                                                    <label key={s.value} style={{ cursor: 'pointer' }}>
+                                                        <input type="radio" name="severity" value={s.value} checked={form.severity === s.value} onChange={(e) => setForm({ ...form, severity: e.target.value })} style={{ display: 'none' }} />
+                                                        <div style={{ 
+                                                            padding: '14px 12px', borderRadius: 12, textAlign: 'center', fontSize: 13, fontWeight: 800,
+                                                            border: `2px solid ${form.severity === s.value ? s.color : '#f1f5f9'}`,
+                                                            background: form.severity === s.value ? `${s.color}15` : '#f8fafc',
+                                                            color: form.severity === s.value ? s.color : '#94a3b8',
+                                                            transition: 'all 0.2s'
+                                                        }}>
+                                                            {s.label}
+                                                        </div>
+                                                    </label>
+                                                ))}
+                                            </div>
+                                        </div>
+
+
+                                        <div className="form-group">
+                                            <label className="form-label" style={{ fontWeight: 700, color: 'var(--text-muted)' }}>Project Notes</label>
+                                            <textarea className="form-textarea" rows={4} placeholder="Describe the findings and immediate requirements..." value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} style={{ borderRadius: 12, padding: 16, fontSize: 13 }} />
                                         </div>
 
                                         <div style={{ display: 'flex', gap: 16, marginTop: 12, borderTop: '1px solid #f1f5f9', paddingTop: 24 }}>

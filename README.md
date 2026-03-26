@@ -1,79 +1,119 @@
-# 🏗️ Snag AI: Advanced Structural Inspection Platform
+# 🏗️ Snag Detection & Reporting Platform (AI-Powered)
 
-A premium, end-to-end snag management system designed for modern construction sites. This platform leverages **Agentic AI Vision** to detect, classify, and match structural damage to specialized contractors in real-time.
+An advanced, end-to-end snag management system designed for construction sites. This platform leverages **AI Vision (YOLOv8)** to detect building damage (cracks, etc.) from images, generates detailed inspection reports, and facilitates real-time collaboration between **Site Engineers** and **Contractors**.
 
 ---
 
 ## 🚀 Key Features
 
-### 🤖 Intelligent AI Pipeline
-*   **Neural Crack Classification**: Distinguishes between **Hairline**, **Surface**, and **Structural** cracks by analyzing area and quantity.
-*   **Vision Agent**: Powered by YOLOv8 (Roboflow API) for high-accuracy damage detection in construction photos.
-*   **Agentic Contractor Matching**: Automatically routes snags to specialists (**Structural, Civil, Plumbing, Electrical, General**) using a precise `SPEC_MAPPING` logic.
-*   **Severity Assessment**: AI-driven priority assignment (Low, Medium, High) with corresponding visual indicators.
+### 🤖 AI-Powered Detection
+*   **Vision Agent**: Deep learning model (YOLOv8 via Roboflow API) for automatic damage detection in site photos.
+*   **Severity Analysis**: Intelligent classification of snags into **Low, Medium, and High** severity.
+*   **Automatic Localization**: Merges multiple detections into a single bounding box for precise visualization.
+*   **Feedback Loop**: Learning agent that evolves based on user feedback.
 
-### 🎨 Premium UI/UX (Redesigned)
-*   **4-Step Inspection Flow**:
-    1.  **Image Hub**: Modern card-based selection for Camera & Gallery.
-    2.  **Intelligence Engine**: Dynamic "Scanning" animation visualizing the AI analysis.
-    3.  **Refined Details**: Tactile classification buttons and live confidence progress bars.
-    4.  **Global Dispatch**: Glassmorphic review interface with integrated email composition.
-*   **Interactive Dashboards**: Real-time project tracking and contractor performance metrics.
+### 👥 Multi-Role Dashboards
+*   **Site Engineer**:
+    *   Project workspace management.
+    *   AI-assisted snag generation from camera/upload.
+    *   Assigning snags to specific contractors.
+    *   Dynamic reporting (Export to **PDF** and **Excel**).
+*   **Contractor**:
+    *   Real-time task assignments.
+    *   Status tracking (Pending → In Progress → Resolved).
+    *   Detailed view of detection results and recommendations.
 
-### 📡 Offline & Secure
-*   **Offline Sync (LocalFirst)**: Capture and save snags in basements with no internet; auto-sync once a connection is found via IndexedDB.
-*   **Secure OTP Registry**: Email-based One-Time Password verification for all contractor signups.
-*   **Verification Badges**: Universal "Email Verified" status badges across all profiles and dashboards.
-*   **Automatic Emailing**: Instant dispatch of professional AI inspection reports (PDF/Text) to contractors.
+### 📡 Real-time & Automation
+*   **Socket.IO Integration**: Instant notifications when new snags are assigned or status is updated.
+*   **Automated Emailing**: Contractors receive detailed AI inspection reports via email with attachments.
+*   **Offline Support**: Integration with IndexedDB allows capturing snags even without internet.
 
 ---
 
 ## 🛠️ Technology Stack
 
 ### **Frontend**
-*   **Core**: [React.js](https://reactjs.org/) (Vite)
-*   **Visuals**: [Lucide React](https://lucide.dev/), Vanilla CSS (Premium Glassmorphism Design)
+*   **Framework**: [React.js](https://reactjs.org/) (Vite)
+*   **Icons**: [Lucide React](https://lucide.dev/)
+*   **Styling**: Vanilla CSS (Global Design System)
 *   **Real-time**: [Socket.io-client](https://socket.io/docs/v4/client-api/)
-*   **Offline**: IndexedDB & Custom Sync Manager
+*   **Data Handling**: [Axios](https://axios-http.com/), [XLSX](https://github.com/SheetJS/sheetjs)
+*   **PDF Generation**: [jsPDF](https://github.com/parallax/jsPDF) + [jsPDF-AutoTable](https://github.com/simonbengtsson/jsPDF-AutoTable)
 
 ### **Backend**
-*   **Runtime**: [Node.js](https://nodejs.org/) & [Express.js](https://expressjs.com/)
+*   **Runtime**: [Node.js](https://nodejs.org/)
+*   **Framework**: [Express.js](https://expressjs.com/)
 *   **Database**: [PostgreSQL](https://www.postgresql.org/)
-*   **Auth**: [JWT](https://jwt.io/), [Bcryptjs](https://github.com/dcodeIO/bcrypt.js)
-*   **Emailing**: [Nodemailer](https://nodemailer.com/) (Gmail SMTP Integration)
+*   **Real-time Engine**: [Socket.io](https://socket.io/)
+*   **Auth**: [JWT](https://jwt.io/) & [Bcryptjs](https://github.com/dcodeIO/bcrypt.js)
+*   **File Handling**: [Multer](https://github.com/expressjs/multer)
+*   **Emailing**: [Nodemailer](https://nodemailer.com/)
 
-### **AI Core (Python)**
-*   **Logic**: Analysis Agent & Discovery Pipeline
-*   **Computer Vision**: YOLOv8 (Roboflow), OpenCV, Numpy
+### **AI Pipeline (Python)**
+*   **Computer Vision**: [OpenCV](https://opencv.org/)
+*   **Deep Learning Interface**: Roboflow API (YOLOv8)
+*   **Data Processing**: Numpy
 
 ---
 
-## ⚙️ Quick Start
+## 📁 Project Structure
 
-1.  **Backend**:
-    ```bash
-    cd backend
-    npm install
-    # Set EMAIL_USER and EMAIL_PASS in .env
-    npm run dev
-    ```
-2.  **Frontend**:
-    ```bash
-    cd frontend
-    npm install
-    npm run dev
-    ```
-3.  **AI Requirements**:
+```text
+├── backend/
+│   ├── snag-detection-system/ # Python AI Agents (Vision, Analysis, Report)
+│   ├── src/
+│   │   ├── config/            # DB & Socket configuration
+│   │   ├── controllers/       # Business logic (Auth, Project, Snag)
+│   │   ├── routes/            # API Endpoints
+│   │   └── utils/             # Helper services (Email, etc.)
+│   └── uploads/               # Image storage
+└── frontend/
+    ├── src/
+    │   ├── api/               # API wrappers (Axios)
+    │   ├── components/        # Reusable UI components
+    │   └── pages/             # Engineer & Contractor screens
+```
+
+---
+
+## ⚙️ Setup & Installation
+
+### 1. Prerequisites
+*   Node.js (v16+)
+*   Python (v3.8+)
+*   PostgreSQL
+
+### 2. Backend Setup
+1.  Navigate to `/backend`.
+2.  Install dependencies: `npm install`.
+3.  Configure `.env` (use `.env.example` as reference).
+    *   Set `DB_PASSWORD`, `EMAIL_USER`, `EMAIL_PASSWORD`.
+4.  Start server: `npm run dev`.
+
+### 3. Frontend Setup
+1.  Navigate to `/frontend`.
+2.  Install dependencies: `npm install`.
+3.  Start dev server: `npm run dev`.
+
+### 4. AI Pipeline Setup
+1.  Navigate to `/backend/snag-detection-system`.
+2.  Install requirements:
     ```bash
     pip install requests opencv-python numpy
     ```
 
 ---
 
-## 📁 System Architecture
-*   `backend/snag-detection-system/`: The AI "Brain" (Vision & Logic agents).
-*   `backend/src/utils/syncManager.js`: The "Offline Sync" engine.
-*   `frontend/src/pages/engineer/GenerateSnag.jsx`: The premium inspection workflow.
+## 📊 Database Schema
+The system automatically creates the following tables:
+*   `users`: Authentication and role management.
+*   `projects`: Construction projects.
+*   `snags`: Detailed snag records including AI results.
+*   `images`: Image metadata and paths.
+*   `reports`: Generated report history.
+*   `status_updates`: Timeline of snag resolution.
 
 ---
-*Built for excellence in engineering and site management.*
+
+## 📜 License
+This project is licensed under the ISC License.

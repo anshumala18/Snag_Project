@@ -1,0 +1,48 @@
+[2026-03-21T05:06:31.593Z] CMD: "python" "./snag-detection-system/pipeline.py" "C:\Users\Anshumala\Downloads\Snag_AI\snag-detection-ai\backend\uploads\snag_crack1_1774069591584-912657781.webp" --json
+[2026-03-21T05:06:31.662Z] ERR: Command failed: "python" "./snag-detection-system/pipeline.py" "C:\Users\Anshumala\Downloads\Snag_AI\snag-detection-ai\backend\uploads\snag_crack1_1774069591584-912657781.webp" --json
+'"python"' is not recognized as an internal or external command,
+operable program or batch file.
+
+STDERR: '"python"' is not recognized as an internal or external command,
+operable program or batch file.
+
+[2026-03-21T05:06:31.663Z] CMD: "py" "./snag-detection-system/pipeline.py" "C:\Users\Anshumala\Downloads\Snag_AI\snag-detection-ai\backend\uploads\snag_crack1_1774069591584-912657781.webp" --json
+[2026-03-21T05:06:32.395Z] ERR: Command failed: "py" "./snag-detection-system/pipeline.py" "C:\Users\Anshumala\Downloads\Snag_AI\snag-detection-ai\backend\uploads\snag_crack1_1774069591584-912657781.webp" --json
+Traceback (most recent call last):
+  File "C:\Users\Anshumala\Downloads\Snag_AI\snag-detection-ai\backend\snag-detection-system\pipeline.py", line 4, in <module>
+    from draw_boxes import filter_predictions, merge_boxes, draw_merged_box
+  File "C:\Users\Anshumala\Downloads\Snag_AI\snag-detection-ai\backend\snag-detection-system\draw_boxes.py", line 1, in <module>
+    import cv2
+ModuleNotFoundError: No module named 'cv2'
+
+STDERR: Traceback (most recent call last):
+  File "C:\Users\Anshumala\Downloads\Snag_AI\snag-detection-ai\backend\snag-detection-system\pipeline.py", line 4, in <module>
+    from draw_boxes import filter_predictions, merge_boxes, draw_merged_box
+  File "C:\Users\Anshumala\Downloads\Snag_AI\snag-detection-ai\backend\snag-detection-system\draw_boxes.py", line 1, in <module>
+    import cv2
+ModuleNotFoundError: No module named 'cv2'
+
+[2026-03-21T05:06:58.591Z] CMD: "python" "./snag-detection-system/pipeline.py" "C:\Users\Anshumala\Downloads\Snag_AI\snag-detection-ai\backend\uploads\snag_crack1_1774069618584-714137639.webp" --json
+[2026-03-21T05:06:58.654Z] ERR: Command failed: "python" "./snag-detection-system/pipeline.py" "C:\Users\Anshumala\Downloads\Snag_AI\snag-detection-ai\backend\uploads\snag_crack1_1774069618584-714137639.webp" --json
+'"python"' is not recognized as an internal or external command,
+operable program or batch file.
+
+STDERR: '"python"' is not recognized as an internal or external command,
+operable program or batch file.
+
+[2026-03-21T05:06:58.655Z] CMD: "py" "./snag-detection-system/pipeline.py" "C:\Users\Anshumala\Downloads\Snag_AI\snag-detection-ai\backend\uploads\snag_crack1_1774069618584-714137639.webp" --json
+[2026-03-21T05:06:59.350Z] ERR: Command failed: "py" "./snag-detection-system/pipeline.py" "C:\Users\Anshumala\Downloads\Snag_AI\snag-detection-ai\backend\uploads\snag_crack1_1774069618584-714137639.webp" --json
+Traceback (most recent call last):
+  File "C:\Users\Anshumala\Downloads\Snag_AI\snag-detection-ai\backend\snag-detection-system\pipeline.py", line 4, in <module>
+    from draw_boxes import filter_predictions, merge_boxes, draw_merged_box
+  File "C:\Users\Anshumala\Downloads\Snag_AI\snag-detection-ai\backend\snag-detection-system\draw_boxes.py", line 1, in <module>
+    import cv2
+ModuleNotFoundError: No module named 'cv2'
+
+STDERR: Traceback (most recent call last):
+  File "C:\Users\Anshumala\Downloads\Snag_AI\snag-detection-ai\backend\snag-detection-system\pipeline.py", line 4, in <module>
+    from draw_boxes import filter_predictions, merge_boxes, draw_merged_box
+  File "C:\Users\Anshumala\Downloads\Snag_AI\snag-detection-ai\backend\snag-detection-system\draw_boxes.py", line 1, in <module>
+    import cv2
+ModuleNotFoundError: No module named 'cv2'
+
